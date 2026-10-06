@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Purchase Excel Import</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <style>
+    :root{--bg:#f6f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--border:#e5e7eb;--primary:#111827;--soft:#eef2ff;--ok:#047857;--danger:#b91c1c;--warn:#92400e}
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .shell{max-width:1500px;margin:auto;padding:20px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    h1{margin:0;font-size:24px}h3{margin-top:0}.sub{color:var(--muted);font-size:13px;margin-top:5px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+    .form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+    input{width:100%;padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff}input[readonly]{background:#f9fafb}
+    .upload-box{border:2px dashed #cbd5e1;border-radius:12px;padding:22px;text-align:center;background:#fafafa}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{border:0;border-radius:8px;padding:10px 15px;cursor:pointer;font-weight:700}
+    .btn.primary{background:var(--primary);color:#fff}.btn.secondary{background:var(--soft);color:#1d4ed8}.btn.danger{background:#fef2f2;color:var(--danger)}.btn:disabled{opacity:.55;cursor:not-allowed}
+    .note{padding:10px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px}.msg{min-height:18px;margin-top:10px;font-size:13px}.ok{color:var(--ok)}.err{color:var(--danger)}.warn{color:var(--warn)}.muted{color:var(--muted)}
+    .table-wrap{overflow:auto;max-height:620px;border:1px solid var(--border);border-radius:10px}table{width:100%;border-collapse:collapse;font-size:12px;min-width:1380px}
+    th,td{padding:7px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}th{position:sticky;top:0;z-index:2;background:#fff;color:var(--muted);font-size:10px;text-transform:uppercase}
+    td input{min-width:90px;padding:7px}.wide{min-width:220px}.mid{min-width:125px}.small{min-width:80px}.required{border-color:#f59e0b;background:#fffbeb}
+    .summarybar{display:flex;gap:20px;flex-wrap:wrap;padding-top:12px;font-size:13px}.summarybar strong{font-size:16px}#printArea{display:none}
+    .barcode-label{width:48mm;height:26mm;border:.2mm solid #bbb;padding:1.5mm 1.5mm 1mm;text-align:center;background:#fff;overflow:hidden;page-break-inside:avoid;break-inside:avoid;font-size:8px;line-height:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .barcode-label .price{font-size:11px;font-weight:700;margin:.6mm 0 .3mm}@page{size:A4 portrait;margin:7mm}
+    @media print{body *{visibility:hidden!important}#printArea,#printArea *{visibility:visible!important}#printArea{display:grid!important;position:absolute;left:0;top:0;width:196mm;grid-template-columns:repeat(4,48mm);grid-auto-rows:26mm;column-gap:1.33mm;row-gap:1mm;align-content:start;justify-content:start}}
+    @media(max-width:900px){.form-grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+  </style>
+  <script src="textile-config.js"></script>
+  <script src="api-bridge.js"></script>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <div><h1>Purchase Excel Import</h1><div class="sub">Upload Excel → enter selling price → generate stock and individual barcodes</div></div>
+    <button class="btn secondary" onclick="clearImport()">Clear</button>
+  </div>
+
+  <div class="card">
+    <h3>1. Upload Purchase Excel</h3>
+    <div class="upload-box">
+      <input id="excel_file" type="file" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
+      <div class="note" style="margin-top:12px">Required in Excel: <strong>Vendor Name, Qty, Purchase Price</strong>. Particulars, Category, MRP, Material, Design, Colour, Size and Remarks are optional. Selling Price can be entered after upload.</div>
+    </div>
+    <div id="msg_upload" class="msg"></div>
+  </div>
+
+  <div class="card">
+    <h3>2. Purchase Details</h3>
+    <div class="form-grid">
+      <div><label>Vendor Name *</label><input id="vendor_name" readonly></div>
+      <div><label>Invoice No. (optional)</label><input id="invoice_no" placeholder="Auto-generated if blank"></div>
+      <div><label>Invoice Date</label><input id="invoice_date" type="date"></div>
+      <div><label>Purchase Remarks</label><input id="purchase_remarks"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>3. Review Items & Enter Selling Price</h3>
+    <div class="note">Only <strong>Selling Price</strong> must be completed before generation. If Category is blank, the backend uses <strong>GENERAL</strong>. If MRP is blank, MRP becomes the Selling Price.</div>
+    <div class="actions">
+      <input id="apply_selling" type="number" min="0" step="0.01" placeholder="Selling price for all" style="width:180px">
+      <button class="btn secondary" onclick="applySellingToAll()">Apply to All</button>
+      <button class="btn secondary" onclick="addBlankRow()">+ Add Row</button>
+    </div>
+    <div id="import_table" class="table-wrap" style="margin-top:12px"><div class="muted" style="padding:12px">Upload an Excel file first.</div></div>
+    <div id="import_totals" class="summarybar"></div>
+    <div id="msg_review" class="msg"></div>
+  </div>
+
+  <div class="card">
+    <h3>4. Generate Stock & Barcodes</h3>
+    <div class="actions">
+      <button id="generate_btn" class="btn primary" onclick="generateBarcodes()" disabled>Generate Barcodes</button>
+      <button id="print_btn" class="btn secondary" onclick="printGeneratedStickers()" disabled>Print Generated Stickers</button>
+    </div>
+    <div id="msg_generate" class="msg"></div>
+    <div id="generated_summary" class="note" style="margin-top:12px">No barcodes generated yet.</div>
+    <div id="printArea"></div>
+  </div>
+</div>
+<script src="purchase-import.js"></script>
+</body>
+</html>
