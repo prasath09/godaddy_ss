@@ -5,6 +5,7 @@ let VENDOR_FROM_EXCEL = false;
 window.onload = () => setToday();
 
 function clean(v){ return String(v ?? "").trim(); }
+function upper(v){ return clean(v).toUpperCase(); }
 function esc(v){ return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c])); }
 function escAttr(v){ return esc(v).replace(/`/g,"&#096;"); }
 function money(v){ return "₹" + Number(v || 0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2}); }
