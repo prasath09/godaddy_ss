@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <base target="_top">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode\@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+
+
+  <style>
+
+    :root{
+
+      --bg:#f6f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280;
+
+      --border:#e5e7eb; --primary:#111827; --accent:#2563eb;
+
+      --soft:#eef2ff; --ok:#047857; --danger:#b91c1c; --warn:#92400e;
+
+    }
+
+    *{box-sizing:border-box}
+
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+
+    .shell{max-width:1400px;margin:auto;padding:20px}
+
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+
+    h1{margin:0;font-size:24px} h3{margin-top:0}
+
+    .sub{color:var(--muted);font-size:13px;margin-top:5px}
+
+    .status{padding:7px 10px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:12px;font-weight:700}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+
+    .form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+
+    .full{grid-column:1/-1}
+
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}
+
+    input{width:100%;padding:10px 11px;border:1px solid #d1d5db;border-radius:8px;background:#fff}
+
+    input[readonly]{background:#f9fafb}
+
+    .scan-box{font-size:22px;padding:15px;border:2px solid var(--accent)}
+
+    .note{padding:10px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px}
+
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+    .btn{border:0;border-radius:8px;padding:10px 15px;cursor:pointer;font-weight:700}
+
+    .btn.primary{background:var(--primary);color:#fff}
+
+    .btn.secondary{background:var(--soft);color:#1d4ed8}
+
+    .btn.danger{background:#fef2f2;color:#b91c1c}
+
+    .msg{font-size:13px;margin-top:10px;min-height:18px}
+
+    .ok{color:var(--ok)} .err{color:var(--danger)} .muted{color:var(--muted)}
+
+    .table-wrap{overflow:auto}
+
+    table{width:100%;border-collapse:collapse;font-size:13px}
+
+    th,td{padding:9px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+
+    th{font-size:11px;color:var(--muted);text-transform:uppercase}
+
+    .summarybar{display:flex;gap:20px;flex-wrap:wrap;padding:12px 0;font-size:13px}
+
+    .summarybar strong{font-size:16px}
+
+    .tier-card{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+
+    .tier-field{background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:10px}
+
+    .tier-field span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+
+    .barcode-label{width:48mm;height:26mm;border:0.2mm solid #bbb;padding:1.5mm 1.5mm 1mm;text-align:center;background:#fff;overflow:hidden;page-break-inside:avoid;break-inside:avoid;font-size:8px;line-height:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+
+    .label-price{font-size:20px;font-weight:700;margin:4px 0}
+
+    @media(max-width:760px){.form-grid,.tier-card{grid-template-columns:1fr}.full{grid-column:auto}}
+
+    @page{size:A4 portrait;margin:7mm}
+    @media print{
+      body *{visibility:hidden !important}
+      #printArea,#printArea *{visibility:visible !important}
+      #printArea{
+        display:grid !important;
+        position:absolute;
+        left:0;
+        top:0;
+        width:196mm;
+        grid-template-columns:repeat(4,48mm);
+        grid-auto-rows:26mm;
+        column-gap:1.33mm;
+        row-gap:1mm;
+        align-content:start;
+        justify-content:start;
+      }
+      .barcode-label{margin:0;box-shadow:none}
+    }
+
+  </style>
+
+
+
+  <script src="textile-config.js"></script>
+
+  <script src="api-bridge.js"></script>
+
+</head>
+
+
+
+<body>
+
+<div class="shell">
+
+  <div class="top">
+
+    <div>
+
+      <h1>Purchase / Stock Inward</h1>
+
+      <div class="sub">Fast mode · No full-data loading · Scan Tier Code and fetch only that record</div>
+
+    </div>
+
+    <span id="page_status" class="status">Ready to scan</span>
+
+  </div>
+
+
+
+  <div class="card">
+
+    <h3>Purchase Details</h3>
+
+    <div class="form-grid">
+
+      <div>
+
+        <label>Invoice Date *</label>
+
+        <input id="pur_date" type="date">
+
+      </div>
+
+      <div>
+
+        <label>Supplier Invoice No. *</label>
+
+        <input id="pur_invoice">
+
+      </div>
+
+      <div>
+
+        <label>Purchase Vendor</label>
+
+        <input id="purchase_vendor_display" readonly placeholder="Set automatically from scanned Tier Code">
+
+      </div>
+
+      <div class="full">
+
+        <label>Purchase Remarks</label>
+
+        <input id="pur_remarks">
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="card">
+
+    <h3>Add Stock Line</h3>
+
+    <div class="note">
+
+      Scan or type the exact Tier Code (example: JT1) and press Enter.
+
+      Only that Tier record is fetched from the database.
+
+    </div>
+
+
+
+    <div style="margin-top:12px">
+
+      <label>Scan / Enter Tier Code *</label>
+
+      <input id="pur_barcode" class="scan-box"
+
+        placeholder="Scan Tier Code and press Enter"
+
+        autocomplete="off"
+
+        oninput="normalizeTierInput(this)"
+
+        onkeydown="purchaseBarcodeKey(event)">
+
+    </div>
+
+
+
+    <div id="tier_result" class="tier-card" style="display:none">
+
+      <div class="tier-field"><span>Vendor</span><strong id="tier_vendor"></strong></div>
+
+      <div class="tier-field"><span>Category</span><strong id="tier_category"></strong></div>
+
+      <div class="tier-field"><span>Tier Code</span><strong id="tier_code"></strong></div>
+
+      <div class="tier-field"><span>Purchase Price</span><strong id="tier_purchase"></strong></div>
+
+      <div class="tier-field"><span>Selling Price</span><strong id="tier_selling"></strong></div>
+
+      <div class="tier-field"><span>MRP</span><strong id="tier_mrp"></strong></div>
+
+    </div>
+
+
+
+    <div class="form-grid" style="margin-top:14px">
+
+      <div>
+
+        <label>Quantity *</label>
+
+        <input id="pur_qty" type="number" min="1" step="1" value="1">
+
+      </div>
+
+      <div>
+
+        <label>Material (optional)</label>
+
+        <input id="pur_material">
+
+      </div>
+
+      <div>
+
+        <label>Design / Style (optional)</label>
+
+        <input id="pur_design">
+
+      </div>
+
+      <div>
+
+        <label>Colour (optional)</label>
+
+        <input id="pur_colour">
+
+      </div>
+
+      <div>
+
+        <label>Size (optional)</label>
+
+        <input id="pur_size">
+
+      </div>
+
+      <div>
+
+        <label>Line Remarks</label>
+
+        <input id="pur_line_remarks">
+
+      </div>
+
+    </div>
+
+
+
+    <div class="actions">
+
+      <button class="btn secondary" onclick="addPurchaseLine()">Add to Purchase Draft</button>
+
+      <button class="btn secondary" onclick="focusTierScanner()">Focus Scanner</button>
+
+    </div>
+
+    <div id="msg_purchase_line" class="msg"></div>
+
+  </div>
+
+
+
+  <div class="card">
+
+    <h3>Purchase Draft</h3>
+
+    <div id="purchase_draft" class="table-wrap"></div>
+
+    <div id="purchase_totals" class="summarybar"></div>
+
+    <div class="actions">
+
+      <button id="post_purchase_btn" class="btn primary" onclick="postPurchase()">Post Purchase & Add Stock</button>
+
+      <button class="btn danger" onclick="clearPurchaseDraft()">Clear Draft</button>
+
+    </div>
+
+    <div id="msg_purchase" class="msg"></div>
+
+  </div>
+
+
+
+  <div class="card">
+
+    <h3>Individual Piece Sticker Printing</h3>
+
+    <div id="last_piece_summary" class="msg">No newly generated piece barcodes yet.</div>
+
+    <div class="actions">
+
+      <button id="print_last_stickers" class="btn secondary"
+
+        onclick="printLastGeneratedStickers()" disabled>
+
+        Print Last Generated Piece Stickers
+
+      </button>
+
+    </div>
+
+    <div id="printArea" style="display:none"></div>
+
+  </div>
+
+
+
+  <div class="card">
+
+    <h3>Recent Purchases</h3>
+
+    <div class="note">
+
+      Recent purchases are not loaded when this page opens. Click only when you need them.
+
+    </div>
+
+    <div class="actions">
+
+      <button class="btn secondary" onclick="loadRecentPurchases()">Load Recent Purchases</button>
+
+    </div>
+
+    <div id="purchase_history" class="table-wrap" style="margin-top:12px">
+
+      <div class="muted">Not loaded.</div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<script src="purchase.js"></script>
+
+</body>
+
+</html>

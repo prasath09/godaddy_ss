@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#fff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --primary:#111827;
+      --accent:#2563eb;
+      --soft:#eef2ff;
+      --ok:#047857;
+      --danger:#b91c1c;
+      --warn:#92400e;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      font-family:Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .shell{
+      max-width:1400px;
+      margin:auto;
+      padding:22px;
+    }
+
+    .top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:18px;
+    }
+
+    h1{
+      margin:0;
+      font-size:24px;
+    }
+
+    h3{
+      margin-top:0;
+    }
+
+    .sub{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:5px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:230px 1fr;
+      gap:18px;
+    }
+
+    .nav,
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+    }
+
+    .nav{
+      padding:10px;
+      height:max-content;
+      position:sticky;
+      top:15px;
+    }
+
+    .nav .section{
+      padding:11px 11px 5px;
+      color:var(--muted);
+      font-size:10px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    .nav button{
+      width:100%;
+      text-align:left;
+      padding:11px;
+      border:0;
+      background:transparent;
+      border-radius:9px;
+      cursor:pointer;
+      margin:2px 0;
+    }
+
+    .nav button.active{
+      background:var(--soft);
+      color:#1d4ed8;
+      font-weight:700;
+    }
+
+    .panel{
+      display:none;
+    }
+
+    .panel.active{
+      display:block;
+    }
+
+    .card{
+      padding:20px;
+      margin-bottom:16px;
+    }
+
+    .form-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+
+    .form-grid.three{
+      grid-template-columns:repeat(3,minmax(0,1fr));
+    }
+
+    .full{
+      grid-column:1/-1;
+    }
+
+    label{
+      font-size:12px;
+      color:var(--muted);
+      display:block;
+      margin-bottom:5px;
+    }
+
+    input,
+    select,
+    textarea{
+      width:100%;
+      padding:10px 11px;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+      background:#fff;
+    }
+
+    textarea{
+      min-height:72px;
+      resize:vertical;
+    }
+
+    .actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+
+    .btn{
+      border:0;
+      border-radius:8px;
+      padding:10px 15px;
+      cursor:pointer;
+      font-weight:700;
+    }
+
+    .btn.primary{
+      background:var(--primary);
+      color:#fff;
+    }
+
+    .btn.secondary{
+      background:var(--soft);
+      color:#1d4ed8;
+    }
+
+    .btn.danger{
+      background:#fef2f2;
+      color:#b91c1c;
+    }
+
+    .msg{
+      font-size:13px;
+      margin-top:10px;
+      min-height:18px;
+    }
+
+    .ok{color:var(--ok)}
+    .err{color:var(--danger)}
+    .warn{color:var(--warn)}
+    .muted{color:var(--muted)}
+
+    .note{
+      padding:10px 12px;
+      background:#f9fafb;
+      border:1px solid var(--border);
+      border-radius:8px;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .table-wrap{
+      overflow:auto;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+    }
+
+    th,
+    td{
+      padding:9px;
+      border-bottom:1px solid var(--border);
+      text-align:left;
+      white-space:nowrap;
+    }
+
+    th{
+      font-size:11px;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+
+    .kpis{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:10px;
+      margin-bottom:16px;
+    }
+
+    .kpi{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:14px;
+    }
+
+    .kpi .n{
+      font-size:22px;
+      font-weight:700;
+    }
+
+    .kpi .l{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:3px;
+    }
+
+    .price-card{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:14px;
+      margin-bottom:10px;
+    }
+
+    .price-card strong{
+      font-size:15px;
+    }
+
+    .barcode-label{
+      width:65mm;
+      min-height:35mm;
+      border:1px dashed #777;
+      padding:8px;
+      text-align:center;
+      background:#fff;
+      page-break-inside:avoid;
+      break-inside:avoid;
+    }
+
+    .label-price{
+      font-size:20px;
+      font-weight:700;
+      margin:4px 0;
+    }
+
+    .scan-box{
+      font-size:20px;
+      padding:14px;
+      border:2px solid var(--accent);
+    }
+
+    .pos-layout{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:16px;
+    }
+
+    .pos-catalog{
+      max-height:440px;
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius:10px;
+    }
+
+    .pos-cart{
+      max-height:430px;
+      overflow:auto;
+    }
+
+    .summarybar{
+      display:flex;
+      gap:20px;
+      flex-wrap:wrap;
+      padding:12px 0;
+      font-size:13px;
+    }
+
+    .summarybar strong{
+      font-size:16px;
+    }
+
+    .payment-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+    }
+
+    .payment-box{
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:12px;
+    }
+
+    @media(max-width:1000px){
+      .grid{grid-template-columns:1fr}
+      .nav{position:static}
+      .pos-layout{grid-template-columns:1fr}
+    }
+
+    @media(max-width:760px){
+      .form-grid,
+      .form-grid.three{
+        grid-template-columns:1fr;
+      }
+
+      .full{
+        grid-column:auto;
+      }
+
+      .payment-grid{
+        grid-template-columns:1fr;
+      }
+
+      .kpis{
+        grid-template-columns:repeat(2,1fr);
+      }
+    }
+
+    @media print{
+      body *{
+        visibility:hidden;
+      }
+
+      #printArea,
+      #printArea *{
+        visibility:visible;
+      }
+
+      #printArea{
+        position:absolute;
+        left:0;
+        top:0;
+      }
+    }
+  
+    /* ===== A4 BARCODE STICKER PRINT - 4 COLUMNS x 10 ROWS ===== */
+    #printArea{display:none;}
+
+    .barcode-label{
+      width:48mm;
+      height:26mm;
+      border:0.2mm solid #bbb;
+      padding:1.5mm 1.5mm 1mm;
+      text-align:center;
+      background:#fff;
+      overflow:hidden;
+      page-break-inside:avoid;
+      break-inside:avoid;
+      font-size:8px;
+      line-height:1.1;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .barcode-label .label-vendor{
+      font-size:7px;
+      font-weight:700;
+      max-width:100%;
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+    }
+
+    .barcode-label .label-meta{
+      font-size:6.5px;
+      margin-top:0.5mm;
+      max-width:100%;
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+    }
+
+    .barcode-label .label-price{
+      font-size:11px;
+      font-weight:700;
+      margin:0.7mm 0 0.3mm;
+    }
+
+    .barcode-label .label-mrp{
+      font-size:6.5px;
+      margin-top:0.2mm;
+    }
+
+    @page{
+      size:A4 portrait;
+      margin:7mm;
+    }
+
+    @media print{
+      body *{visibility:hidden !important;}
+
+      #printArea,
+      #printArea *{
+        visibility:visible !important;
+      }
+
+      #printArea{
+        display:grid !important;
+        position:absolute;
+        left:0;
+        top:0;
+        width:196mm;
+        grid-template-columns:repeat(4,48mm);
+        grid-auto-rows:26mm;
+        column-gap:1.33mm;
+        row-gap:1mm;
+        align-content:start;
+        justify-content:start;
+      }
+
+      .barcode-label{
+        margin:0;
+        box-shadow:none;
+      }
+    }
+
+  </style>
+
+  <script src="textile-config.js"></script>
+  <script src="api-bridge.js"></script>
+</head>
+
+<body>
+<div class="shell">
+
+  <div class="top">
+    <div>
+      <h1>Textile Shop - Barcode Inventory & Billing</h1>
+      <div class="sub">
+        Single Outlet · Batch-wise Individual Piece Barcodes · Barcode Billing · V8
+      </div>
+    </div>
+
+    <button class="btn secondary" onclick="loadAll()">
+      Refresh
+    </button>
+  </div>
+
+  <div class="grid">
+
+    <div class="nav">
+      <div class="section">Masters</div>
+
+      <button class="active" data-target="vendors">
+        Vendors
+      </button>
+
+      <button data-target="categories">
+        Categories
+      </button>
+
+      <button data-target="vendorcategories">
+        Vendor Categories
+      </button>
+
+      <button data-target="materials">
+        Materials
+      </button>
+
+      <button data-target="pricetiers">
+        Price Tiers & Barcode
+      </button>
+
+      <div class="section">Inventory</div>
+
+      <button data-target="purchase">
+        Purchase / Stock Inward
+      </button>
+
+      <button data-target="stock">
+        Current Stock
+      </button>
+
+      <button data-target="ledger">
+        Stock Ledger
+      </button>
+
+      <div class="section">Billing</div>
+
+      <button data-target="pos">
+        POS / Billing
+      </button>
+    </div>
+
+
+    <div>
+
+      <!-- VENDORS -->
+      <section id="vendors" class="panel active">
+
+        <div class="card">
+          <h3>Add Vendor</h3>
+
+          <div class="form-grid">
+            <div>
+              <label>Vendor Name *</label>
+              <input id="v_name">
+            </div>
+
+            <div>
+              <label>Mobile</label>
+              <input id="v_mobile">
+            </div>
+
+            <div>
+              <label>GSTIN</label>
+              <input id="v_gstin">
+            </div>
+
+            <div class="full">
+              <label>Address</label>
+              <textarea id="v_address"></textarea>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" onclick="saveVendor()">
+              Save Vendor
+            </button>
+          </div>
+
+          <div id="msg_vendors" class="msg"></div>
+        </div>
+
+        <div class="card">
+          <h3>Vendor List</h3>
+          <div id="list_vendors" class="table-wrap"></div>
+        </div>
+
+      </section>
+
+
+      <!-- CATEGORIES -->
+      <section id="categories" class="panel">
+
+        <div class="card">
+          <h3>Add Category</h3>
+
+          <div class="form-grid">
+            <div>
+              <label>Category Name *</label>
+              <input id="c_name" placeholder="Shirts / T-Shirts">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" onclick="saveCategory()">
+              Save Category
+            </button>
+          </div>
+
+          <div id="msg_categories" class="msg"></div>
+        </div>
+
+        <div class="card">
+          <h3>Category List</h3>
+          <div id="list_categories" class="table-wrap"></div>
+        </div>
+
+      </section>
+
+
+      <!-- VENDOR CATEGORY -->
+      <section id="vendorcategories" class="panel">
+
+        <div class="card">
+          <h3>Assign Category to Vendor</h3>
+
+          <div class="form-grid">
+            <div>
+              <label>Vendor *</label>
+              <select id="vc_vendor"></select>
+            </div>
+
+            <div>
+              <label>Category *</label>
+              <select id="vc_category"></select>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" onclick="saveVendorCategory()">
+              Assign Category
+            </button>
+          </div>
+
+          <div id="msg_vendorcategories" class="msg"></div>
+        </div>
+
+        <div class="card">
+          <h3>Vendor Category Mapping</h3>
+          <div id="list_vendorcategories" class="table-wrap"></div>
+        </div>
+
+      </section>
+
+
+      <!-- MATERIALS -->
+      <section id="materials" class="panel">
+
+        <div class="card">
+          <h3>Add Material</h3>
+
+          <div class="note">
+            Optional. Material does not define the barcode.
+          </div>
+
+          <div class="form-grid" style="margin-top:12px">
+            <div>
+              <label>Material Name *</label>
+              <input id="m_name">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" onclick="saveMaterial()">
+              Save Material
+            </button>
+          </div>
+
+          <div id="msg_materials" class="msg"></div>
+        </div>
+
+        <div class="card">
+          <h3>Material List</h3>
+          <div id="list_materials" class="table-wrap"></div>
+        </div>
+
+      </section>
+
+
+      <!-- PRICE TIERS -->
+      <section id="pricetiers" class="panel">
+
+        <div class="card">
+          <h3>Create / Reuse Price Tier</h3>
+
+          <div class="note">
+            Tier Code is mandatory and is the human-friendly identifier.
+            Example: JT1, JT2. The Tier Code is not the final piece barcode; individual barcodes are created during purchase inward.
+          </div>
+
+          <div class="form-grid three" style="margin-top:12px">
+
+            <div>
+              <label>Vendor *</label>
+              <select id="pt_vendor" onchange="fillPriceTierCategories()"></select>
+            </div>
+
+            <div>
+              <label>Category *</label>
+              <select id="pt_category"></select>
+            </div>
+
+            <div>
+              <label>Tier Code *</label>
+              <input
+                id="pt_name"
+                placeholder="Example: JT1"
+                maxlength="20"
+                oninput="normalizeTierInput(this)">
+            </div>
+
+            <div>
+              <label>Purchase Price *</label>
+              <input id="pt_purchase" type="number" step="0.01">
+            </div>
+
+            <div>
+              <label>Selling Price *</label>
+              <input id="pt_selling" type="number" step="0.01">
+            </div>
+
+            <div>
+              <label>MRP *</label>
+              <input id="pt_mrp" type="number" step="0.01">
+            </div>
+
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" onclick="savePriceTier()">
+              Save / Reuse Tier
+            </button>
+          </div>
+
+          <div id="msg_pricetiers" class="msg"></div>
+        </div>
+
+
+        <div class="card">
+          <h3>Price Tier List</h3>
+          <div class="note" style="margin-bottom:12px">
+            Tier Code is the master code. Individual piece barcodes are created only when purchase stock is posted.
+          </div>
+          <div id="list_pricetiers" class="table-wrap"></div>
+        </div>
+
+
+        <div class="card">
+          <h3>Sticker Printing</h3>
+
+          <div class="form-grid">
+            <div>
+              <label>Select Barcode *</label>
+              <select id="print_barcode"></select>
+            </div>
+
+            <div>
+              <label>Number of Stickers *</label>
+              <input
+                id="print_qty"
+                type="number"
+                min="1"
+                step="1"
+                value="1">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn secondary" onclick="printStickers()">
+              Print Stickers
+            </button>
+          </div>
+
+          <div id="printArea" style="display:none"></div>
+        </div>
+
+      </section>
+
+
+      <!-- PURCHASE -->
+      <section id="purchase" class="panel">
+
+        <div class="card">
+          <h3>Purchase / Stock Inward - Fast Bulk Mode</h3>
+
+          <div class="form-grid three">
+
+            <div>
+              <label>Vendor *</label>
+              <select id="pur_vendor" onchange="purchaseVendorChanged()"></select>
+            </div>
+
+            <div>
+              <label>Invoice Date *</label>
+              <input id="pur_date" type="date">
+            </div>
+
+            <div>
+              <label>Supplier Invoice No. *</label>
+              <input id="pur_invoice">
+            </div>
+
+            <div class="full">
+              <label>Remarks</label>
+              <input id="pur_remarks">
+            </div>
+
+          </div>
+        </div>
+
+
+        <div class="card">
+          <h3>Add Stock Line</h3>
+
+          <div class="note">
+            Scan or type the Tier Code (example: JT1), or manually select Vendor → Category → Price Tier.
+            Enter the inward quantity once. The system then creates a new Batch and one unique barcode for each physical piece.
+          </div>
+
+          <div class="form-grid three" style="margin-top:12px">
+
+            <div class="full">
+              <label>Scan / Enter Tier Code</label>
+              <input
+                id="pur_barcode"
+                class="scan-box"
+                placeholder="Enter Tier Code, e.g. JT1, and press Enter"
+                onkeydown="purchaseBarcodeKey(event)">
+            </div>
+
+            <div>
+              <label>Category *</label>
+              <select id="pur_category" onchange="fillPurchasePriceTiers()"></select>
+            </div>
+
+            <div>
+              <label>Price Tier *</label>
+              <select id="pur_tier" onchange="showSelectedPurchaseTier()"></select>
+            </div>
+
+            <div>
+              <label>Quantity *</label>
+              <input id="pur_qty" type="number" min="1" step="1" value="1">
+            </div>
+
+            <div>
+              <label>Material (optional)</label>
+              <select id="pur_material"></select>
+            </div>
+
+            <div>
+              <label>Design / Style (optional)</label>
+              <input id="pur_design">
+            </div>
+
+            <div>
+              <label>Colour (optional)</label>
+              <input id="pur_colour">
+            </div>
+
+            <div>
+              <label>Size (optional)</label>
+              <input id="pur_size">
+            </div>
+
+            <div>
+              <label>Line Remarks</label>
+              <input id="pur_line_remarks">
+            </div>
+
+          </div>
+
+          <div id="pur_tier_info" class="note" style="margin-top:12px">
+            Select a Price Tier or enter the Tier Code.
+          </div>
+
+          <div class="actions">
+            <button class="btn secondary" onclick="addPurchaseLine()">
+              Add to Purchase Draft
+            </button>
+          </div>
+
+          <div id="msg_purchase_line" class="msg"></div>
+        </div>
+
+
+        <div class="card">
+          <h3>Purchase Draft</h3>
+
+          <div id="purchase_draft" class="table-wrap"></div>
+
+          <div id="purchase_totals" class="summarybar"></div>
+
+          <div class="actions">
+            <button class="btn primary" onclick="postPurchase()">
+              Post Purchase & Add Stock
+            </button>
+
+            <button class="btn danger" onclick="clearPurchaseDraft()">
+              Clear Draft
+            </button>
+          </div>
+
+          <div id="msg_purchase" class="msg"></div>
+        </div>
+
+
+        <div class="card">
+          <h3>Recent Purchases</h3>
+          <div id="purchase_history" class="table-wrap"></div>
+        </div>
+
+      </section>
+
+
+      <!-- STOCK -->
+      <section id="stock" class="panel">
+
+        <div id="stock_kpis" class="kpis"></div>
+
+        <div class="card">
+          <h3>Current Stock</h3>
+
+          <input
+            id="stock_search"
+            placeholder="Search vendor / category / tier code"
+            oninput="renderStock()">
+
+          <div id="stock_table" class="table-wrap" style="margin-top:12px"></div>
+        </div>
+
+      </section>
+
+
+      <!-- LEDGER -->
+      <section id="ledger" class="panel">
+
+        <div class="card">
+          <h3>Stock Ledger</h3>
+
+          <div class="actions">
+            <button class="btn secondary" onclick="loadLedger()">
+              Refresh Ledger
+            </button>
+          </div>
+
+          <div id="ledger_table" class="table-wrap" style="margin-top:12px"></div>
+        </div>
+
+      </section>
+
+
+      <!-- POS -->
+      <section id="pos" class="panel">
+
+        <div class="card">
+          <h3>POS / Billing</h3>
+
+          <div class="form-grid three">
+            <div>
+              <label>Bill Date *</label>
+              <input id="pos_date" type="date">
+            </div>
+
+            <div>
+              <label>Customer Mobile</label>
+              <input id="pos_mobile">
+            </div>
+
+            <div>
+              <label>Customer Name</label>
+              <input id="pos_customer">
+            </div>
+          </div>
+
+          <div class="note" style="margin-top:12px">
+            Scan the individual piece barcode (example: JT1-B001-017). If the scanner fails, type the full piece barcode manually.
+            You can also search available pieces by Vendor / Category / Tier Code.
+          </div>
+        </div>
+
+
+        <div class="pos-layout">
+
+          <div class="card">
+            <h3>Scan / Search Product</h3>
+
+            <input
+              id="pos_search"
+              class="scan-box"
+              placeholder="Scan piece barcode or search Vendor / Category / Tier Code..."
+              oninput="renderPOSCatalog()"
+              onkeydown="posSearchKey(event)">
+
+            <div id="pos_catalog" class="pos-catalog" style="margin-top:12px"></div>
+          </div>
+
+
+          <div class="card">
+            <h3>Current Bill</h3>
+
+            <div id="pos_cart" class="pos-cart"></div>
+
+            <div style="margin-top:14px">
+              <label>Additional Bill Discount (₹)</label>
+              <input
+                id="pos_bill_discount"
+                type="number"
+                min="0"
+                step="0.01"
+                value="0"
+                oninput="renderPOSCart()">
+            </div>
+
+            <div id="pos_totals" class="summarybar"></div>
+          </div>
+
+        </div>
+
+
+        <div class="card">
+          <h3>Payment</h3>
+
+          <div class="payment-grid">
+
+            <div class="payment-box">
+              <label>Cash Amount</label>
+              <input
+                id="pay_cash"
+                type="number"
+                min="0"
+                step="0.01"
+                value="0"
+                oninput="renderPaymentBalance()">
+
+              <div class="actions">
+                <button class="btn secondary" onclick="fillCashBalance()">
+                  Fill Balance
+                </button>
+              </div>
+            </div>
+
+
+            <div class="payment-box">
+              <label>UPI Amount</label>
+              <input
+                id="pay_upi"
+                type="number"
+                min="0"
+                step="0.01"
+                value="0"
+                oninput="renderPaymentBalance()">
+
+              <label style="margin-top:8px">UPI Reference</label>
+              <input id="pay_upi_ref">
+            </div>
+
+
+            <div class="payment-box">
+              <label>Card Amount</label>
+              <input
+                id="pay_card"
+                type="number"
+                min="0"
+                step="0.01"
+                value="0"
+                oninput="renderPaymentBalance()">
+
+              <label style="margin-top:8px">Card Reference</label>
+              <input id="pay_card_ref">
+            </div>
+
+          </div>
+
+          <div id="payment_balance" class="summarybar"></div>
+
+          <div class="actions">
+            <button class="btn primary" onclick="completeSale()">
+              Complete Sale
+            </button>
+
+            <button class="btn danger" onclick="clearPOS()">
+              Clear Bill
+            </button>
+
+            <button
+              id="print_last_bill"
+              class="btn secondary"
+              onclick="printLastBill()"
+              disabled>
+              Print Last Bill
+            </button>
+          </div>
+
+          <div id="msg_pos" class="msg"></div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </div>
+</div>
+
+
+<script src="app.js"></script>
+
+
+</body>
+</html>

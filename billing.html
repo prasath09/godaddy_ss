@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <base target="_top">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+
+
+  <style>
+
+    :root{
+
+      --bg:#f6f7fb;
+
+      --card:#fff;
+
+      --text:#1f2937;
+
+      --muted:#6b7280;
+
+      --border:#e5e7eb;
+
+      --primary:#111827;
+
+      --accent:#2563eb;
+
+      --soft:#eef2ff;
+
+      --ok:#047857;
+
+      --danger:#b91c1c;
+
+    }
+
+
+
+    *{box-sizing:border-box}
+
+
+
+    body{
+
+      margin:0;
+
+      font-family:Arial,sans-serif;
+
+      background:var(--bg);
+
+      color:var(--text);
+
+    }
+
+
+
+    .shell{
+
+      max-width:1450px;
+
+      margin:auto;
+
+      padding:20px;
+
+    }
+
+
+
+    .top{
+
+      display:flex;
+
+      justify-content:space-between;
+
+      align-items:center;
+
+      gap:12px;
+
+      margin-bottom:16px;
+
+    }
+
+
+
+    h1{
+
+      margin:0;
+
+      font-size:24px;
+
+    }
+
+
+
+    h3{margin-top:0}
+
+
+
+    .sub{
+
+      color:var(--muted);
+
+      font-size:13px;
+
+      margin-top:5px;
+
+    }
+
+
+
+    .card{
+
+      background:var(--card);
+
+      border:1px solid var(--border);
+
+      border-radius:14px;
+
+      padding:20px;
+
+      margin-bottom:16px;
+
+    }
+
+
+
+    .form-grid{
+
+      display:grid;
+
+      grid-template-columns:repeat(3,minmax(0,1fr));
+
+      gap:12px;
+
+    }
+
+
+
+    label{
+
+      font-size:12px;
+
+      color:var(--muted);
+
+      display:block;
+
+      margin-bottom:5px;
+
+    }
+
+
+
+    input,select{
+
+      width:100%;
+
+      padding:10px 11px;
+
+      border:1px solid #d1d5db;
+
+      border-radius:8px;
+
+      background:#fff;
+
+    }
+
+
+
+    .scan-box{
+
+      font-size:22px;
+
+      padding:15px;
+
+      border:2px solid var(--accent);
+
+    }
+
+
+
+    .note{
+
+      padding:10px 12px;
+
+      background:#f9fafb;
+
+      border:1px solid var(--border);
+
+      border-radius:8px;
+
+      color:var(--muted);
+
+      font-size:12px;
+
+    }
+
+
+
+    .pos-layout{
+
+      display:grid;
+
+      grid-template-columns:1fr 1fr;
+
+      gap:16px;
+
+    }
+
+
+
+    .pos-catalog{
+
+      max-height:520px;
+
+      overflow:auto;
+
+      border:1px solid var(--border);
+
+      border-radius:10px;
+
+    }
+
+
+
+    .pos-cart{
+
+      max-height:510px;
+
+      overflow:auto;
+
+    }
+
+
+
+    table{
+
+      width:100%;
+
+      border-collapse:collapse;
+
+      font-size:13px;
+
+    }
+
+
+
+    th,td{
+
+      padding:9px;
+
+      border-bottom:1px solid var(--border);
+
+      text-align:left;
+
+      white-space:nowrap;
+
+    }
+
+
+
+    th{
+
+      font-size:11px;
+
+      color:var(--muted);
+
+      text-transform:uppercase;
+
+      position:sticky;
+
+      top:0;
+
+      background:#fff;
+
+      z-index:1;
+
+    }
+
+
+
+    .summarybar{
+
+      display:flex;
+
+      gap:20px;
+
+      flex-wrap:wrap;
+
+      padding:12px 0;
+
+      font-size:13px;
+
+    }
+
+
+
+    .summarybar strong{
+
+      font-size:16px;
+
+    }
+
+
+
+    .payment-grid{
+
+      display:grid;
+
+      grid-template-columns:repeat(3,1fr);
+
+      gap:10px;
+
+    }
+
+
+
+    .payment-box{
+
+      border:1px solid var(--border);
+
+      border-radius:10px;
+
+      padding:12px;
+
+    }
+
+
+
+    .actions{
+
+      display:flex;
+
+      gap:8px;
+
+      flex-wrap:wrap;
+
+      margin-top:14px;
+
+    }
+
+
+
+    .btn{
+
+      border:0;
+
+      border-radius:8px;
+
+      padding:10px 15px;
+
+      cursor:pointer;
+
+      font-weight:700;
+
+    }
+
+
+
+    .btn.primary{
+
+      background:var(--primary);
+
+      color:#fff;
+
+    }
+
+
+
+    .btn.secondary{
+
+      background:var(--soft);
+
+      color:#1d4ed8;
+
+    }
+
+
+
+    .btn.danger{
+
+      background:#fef2f2;
+
+      color:#b91c1c;
+
+    }
+
+
+
+    .msg{
+
+      font-size:13px;
+
+      margin-top:10px;
+
+      min-height:18px;
+
+    }
+
+
+
+    .ok{color:var(--ok)}
+
+    .err{color:var(--danger)}
+
+    .muted{color:var(--muted)}
+
+
+
+    .status{
+
+      padding:7px 10px;
+
+      border-radius:999px;
+
+      background:#ecfdf5;
+
+      color:#047857;
+
+      font-size:12px;
+
+      font-weight:700;
+
+      display:inline-block;
+
+    }
+
+
+
+    @media(max-width:1000px){
+
+      .pos-layout{grid-template-columns:1fr}
+
+    }
+
+
+
+    @media(max-width:760px){
+
+      .form-grid,
+
+      .payment-grid{
+
+        grid-template-columns:1fr;
+
+      }
+
+    }
+
+  </style>
+
+
+
+  <script src="textile-config.js"></script>
+
+  <script src="api-bridge.js"></script>
+
+</head>
+
+
+
+<body>
+
+<div class="shell">
+
+
+
+  <div class="top">
+
+    <div>
+
+      <h1>Textile Shop - Billing Counter</h1>
+
+      <div class="sub">
+
+        Fast Barcode Billing · Tier Barcode or Individual Piece Barcode · V8
+
+      </div>
+
+    </div>
+
+
+
+    <div>
+
+      <span id="catalog_status" class="status">Ready to scan</span>
+
+      <button class="btn secondary" onclick="focusScanner()" style="margin-left:8px">
+
+        Focus Scanner
+
+      </button>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="card">
+
+    <h3>Bill Details</h3>
+
+
+
+    <div class="form-grid">
+
+      <div>
+
+        <label>Bill Date *</label>
+
+        <input id="pos_date" type="date">
+
+      </div>
+
+
+
+      <div>
+
+        <label>Customer Mobile</label>
+
+        <input id="pos_mobile">
+
+      </div>
+
+
+
+      <div>
+
+        <label>Customer Name</label>
+
+        <input id="pos_customer">
+
+      </div>
+
+    </div>
+
+
+
+    <div class="note" style="margin-top:12px">
+
+      Scan either the <strong>Tier / Master Barcode</strong> (example AP1) or an individual piece barcode. The system will pull the matching record from the database.
+
+    </div>
+
+  </div>
+
+
+
+  <div class="pos-layout">
+
+
+
+    <div class="card">
+
+      <h3>Scan Barcode</h3>
+
+
+
+      <input
+
+        id="pos_search"
+
+        class="scan-box"
+
+        placeholder="Scan Tier barcode or individual piece barcode and press Enter"
+
+        autocomplete="off"
+
+        onkeydown="posSearchKey(event)">
+
+
+
+      <div id="pos_catalog" class="note" style="margin-top:12px">
+
+        No stock catalog is loaded. Each scan fetches only the relevant record from the database.
+
+      </div>
+
+    </div>
+
+
+
+    <div class="card">
+
+      <h3>Current Bill</h3>
+
+
+
+      <div id="pos_cart" class="pos-cart"></div>
+
+
+
+      <div style="margin-top:14px">
+
+        <label>Additional Bill Discount (₹)</label>
+
+        <input
+
+          id="pos_bill_discount"
+
+          type="number"
+
+          min="0"
+
+          step="0.01"
+
+          value="0"
+
+          oninput="renderPOSCart()">
+
+      </div>
+
+
+
+      <div id="pos_totals" class="summarybar"></div>
+
+    </div>
+
+
+
+  </div>
+
+
+
+  <div class="card">
+
+    <h3>Payment</h3>
+
+
+
+    <div class="form-grid">
+
+      <div>
+
+        <label>Mode of Payment *</label>
+
+        <select id="payment_mode">
+
+          <option value="CASH">Cash</option>
+
+          <option value="UPI">UPI</option>
+
+        </select>
+
+      </div>
+
+
+
+      <div>
+
+        <label>Bill Amount</label>
+
+        <input id="payment_total_display" type="text" value="₹0.00" readonly>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="actions">
+
+      <button id="complete_sale_btn" class="btn primary" onclick="completeSale()">
+
+        Complete Sale
+
+      </button>
+
+
+
+      <button class="btn danger" onclick="clearPOS()">
+
+        Clear Bill
+
+      </button>
+
+
+
+      <button
+
+        id="print_last_bill"
+
+        class="btn secondary"
+
+        onclick="printLastBill()"
+
+        disabled>
+
+        Print Last Bill
+
+      </button>
+
+    </div>
+
+
+
+    <div id="msg_pos" class="msg"></div>
+
+  </div>
+
+
+
+</div>
+
+
+
+<script src="billing.js"></script>
+
+</body>
+
+</html>
