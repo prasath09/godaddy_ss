@@ -59,6 +59,7 @@ function loadWorkbook(wb){
       Particulars:clean(getField(r,["Particulars","Description","Item","Product"])),
       Qty:Number(getField(r,["Qty","Quantity","Pcs","No of Pcs"])||0),
       PurchasePrice:Number(getField(r,["Purchase Price","Purchase Rate","Rate","Cost"])||0),
+      Code:upper(getField(r,["Code","Tier Code","Tier","Price Code"])||""),
       SellingPrice:Number(getField(r,["Selling Price","Selling","Sale Price"])||0),
       MRP:Number(getField(r,["MRP"])||0),
       Category:clean(getField(r,["Category"])),
@@ -88,17 +89,25 @@ function vendorNameChanged(){
   validateReady();
 }
 function addBlankRow(){
-  IMPORT_ROWS.push({RowNo:IMPORT_ROWS.length+1,Particulars:"",Qty:1,PurchasePrice:0,SellingPrice:0,MRP:0,Category:"",Material:"",Design:"",Colour:"",Size:"",Remarks:""});
+  IMPORT_ROWS.push({RowNo:IMPORT_ROWS.length+1,Particulars:"",Qty:1,PurchasePrice:0,Code:"",SellingPrice:0,MRP:0,Category:"",Material:"",Design:"",Colour:"",Size:"",Remarks:""});
   renderTable(); validateReady();
 }
 
 function updateRow(i,field,value){
   const r=IMPORT_ROWS[i]; if(!r)return;
-  if(["Qty","PurchasePrice","SellingPrice","MRP"].includes(field)) r[field]=Number(value||0); else r[field]=clean(value);
+  if(["Qty","PurchasePrice","SellingPrice","MRP"].includes(field)) r[field]=Number(value||0); else { r[field]=clean(value); if(field==="Code") r[field]=upper(r[field]).replace(/[^A-Z0-9-]/g,""); }
   renderTotals(); validateReady();
 }
 
 function removeRow(i){ IMPORT_ROWS.splice(i,1); IMPORT_ROWS.forEach((r,n)=>r.RowNo=n+1); renderTable(); validateReady(); }
+
+function applyCodeToAll(){
+  const code=upper(document.getElementById("apply_code").value).replace(/[^A-Z0-9-]/g,"");
+  if(!code) return msg("review","Enter a valid Code first. Example: JT1.","err");
+  IMPORT_ROWS.forEach(r=>r.Code=code);
+  renderTable(); validateReady();
+  msg("review",`Code ${code} applied to all rows.`,"ok");
+}
 
 function applySellingToAll(){
   const price=Number(document.getElementById("apply_selling").value||0);
@@ -109,12 +118,13 @@ function applySellingToAll(){
 function renderTable(){
   const el=document.getElementById("import_table");
   if(!IMPORT_ROWS.length){ el.innerHTML='<div class="muted" style="padding:12px">No imported rows.</div>'; renderTotals(); return; }
-  el.innerHTML=`<table><thead><tr><th>#</th><th>Particulars</th><th>Qty</th><th>Purchase</th><th>Selling *</th><th>MRP</th><th>Category</th><th>Material</th><th>Design</th><th>Colour</th><th>Size</th><th>Remarks</th><th></th></tr></thead><tbody>${IMPORT_ROWS.map((r,i)=>`
+  el.innerHTML=`<table><thead><tr><th>#</th><th>Particulars</th><th>Qty</th><th>Purchase</th><th>Code *</th><th>Selling *</th><th>MRP</th><th>Category</th><th>Material</th><th>Design</th><th>Colour</th><th>Size</th><th>Remarks</th><th></th></tr></thead><tbody>${IMPORT_ROWS.map((r,i)=>`
     <tr>
       <td>${i+1}</td>
       <td><input class="wide" value="${escAttr(r.Particulars)}" onchange="updateRow(${i},'Particulars',this.value)"></td>
       <td><input class="small" type="number" min="1" step="1" value="${r.Qty||""}" onchange="updateRow(${i},'Qty',this.value)"></td>
       <td><input class="small" type="number" min="0" step=".01" value="${r.PurchasePrice||""}" onchange="updateRow(${i},'PurchasePrice',this.value)"></td>
+      <td><input class="small required" type="text" maxlength="20" value="${escAttr(r.Code||"")}" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')" onchange="updateRow(${i},'Code',this.value)"></td>
       <td><input class="small required" type="number" min="0" step=".01" value="${r.SellingPrice||""}" onchange="updateRow(${i},'SellingPrice',this.value)"></td>
       <td><input class="small" type="number" min="0" step=".01" value="${r.MRP||""}" onchange="updateRow(${i},'MRP',this.value)"></td>
       <td><input class="mid" value="${escAttr(r.Category)}" onchange="updateRow(${i},'Category',this.value)"></td>
@@ -142,6 +152,8 @@ function validateReady(){
   if(!error&&!vendorName) error="Enter Vendor Name at the top.";
   if(!error&&IMPORT_ROWS.some(r=>!Number.isInteger(Number(r.Qty))||Number(r.Qty)<=0)) error="Every row needs a valid whole-number Qty.";
   if(!error&&IMPORT_ROWS.some(r=>!Number.isFinite(Number(r.PurchasePrice))||Number(r.PurchasePrice)<=0)) error="Every row needs Purchase Price.";
+  if(!error&&IMPORT_ROWS.some(r=>!clean(r.Code))) error="Enter Code for every row.";
+  if(!error&&IMPORT_ROWS.some(r=>!/^[A-Z0-9-]+$/.test(upper(r.Code)))) error="Code can contain only A-Z, 0-9 and hyphen.";
   if(!error&&IMPORT_ROWS.some(r=>!Number.isFinite(Number(r.SellingPrice))||Number(r.SellingPrice)<=0)) error="Enter Selling Price for every row.";
   if(!error&&IMPORT_ROWS.some(r=>Number(r.MRP||0)>0&&Number(r.SellingPrice)>Number(r.MRP))) error="Selling Price cannot be greater than MRP.";
   document.getElementById("generate_btn").disabled=!!error;
@@ -160,7 +172,7 @@ async function generateBarcodes(){
       InvoiceNo:clean(document.getElementById("invoice_no").value),
       InvoiceDate:clean(document.getElementById("invoice_date").value),
       Remarks:clean(document.getElementById("purchase_remarks").value),
-      Items:IMPORT_ROWS.map(r=>({VendorName:clean(document.getElementById("vendor_name").value),Particulars:r.Particulars,Qty:Number(r.Qty),PurchasePrice:Number(r.PurchasePrice),SellingPrice:Number(r.SellingPrice),MRP:Number(r.MRP||0),Category:r.Category,Material:r.Material,Design:r.Design,Colour:r.Colour,Size:r.Size,Remarks:r.Remarks}))
+      Items:IMPORT_ROWS.map(r=>({VendorName:clean(document.getElementById("vendor_name").value),Particulars:r.Particulars,Code:r.Code,Qty:Number(r.Qty),PurchasePrice:Number(r.PurchasePrice),SellingPrice:Number(r.SellingPrice),MRP:Number(r.MRP||0),Category:r.Category,Material:r.Material,Design:r.Design,Colour:r.Colour,Size:r.Size,Remarks:r.Remarks}))
     });
     GENERATED_PIECES=Array.isArray(res?.generatedPieces)?res.generatedPieces:[];
     msg("generate",res?.message||"Barcodes generated successfully.","ok");
@@ -184,7 +196,7 @@ function printGeneratedStickers(){
 
 function clearImport(){
   IMPORT_ROWS=[]; GENERATED_PIECES=[];
-  document.getElementById("excel_file").value=""; document.getElementById("vendor_name").value=""; document.getElementById("invoice_no").value=""; document.getElementById("purchase_remarks").value=""; document.getElementById("apply_selling").value="";
+  document.getElementById("excel_file").value=""; document.getElementById("vendor_name").value=""; document.getElementById("invoice_no").value=""; document.getElementById("purchase_remarks").value=""; document.getElementById("apply_code").value=""; document.getElementById("apply_selling").value="";
   document.getElementById("generate_btn").disabled=true; document.getElementById("print_btn").disabled=true; document.getElementById("generated_summary").textContent="No barcodes generated yet.";
   msg("upload",""); msg("review",""); msg("generate",""); setToday(); renderTable();
 }
