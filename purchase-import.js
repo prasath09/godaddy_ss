@@ -191,7 +191,31 @@ function printGeneratedStickers(){
     area.appendChild(div);
   });
   area.style.display="grid";
-  area.querySelectorAll(".barcode-svg").forEach(svg=>JsBarcode(svg,svg.dataset.barcode,{format:"CODE128",displayValue:true,fontSize:9,width:1.15,height:25,margin:0,textMargin:1}));
+  area.querySelectorAll(".barcode-svg").forEach(svg=>{
+    const code=String(svg.dataset.barcode||"").trim();
+
+    // 48 mm sticker: keep the complete Code 128 barcode inside the label.
+    // A wider module value clips the right side and scanners cannot decode it.
+    let moduleWidth=0.85;
+    if(code.length>13) moduleWidth=0.75;
+    if(code.length>16) moduleWidth=0.65;
+
+    JsBarcode(svg,code,{
+      format:"CODE128",
+      displayValue:true,
+      fontSize:8,
+      width:moduleWidth,
+      height:34,
+      margin:6,
+      textMargin:2,
+      background:"#ffffff",
+      lineColor:"#000000"
+    });
+
+    svg.style.maxWidth="44mm";
+    svg.style.width="auto";
+    svg.style.height="auto";
+  });
   setTimeout(()=>window.print(),120);
 }
 
