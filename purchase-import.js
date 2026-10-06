@@ -1,5 +1,6 @@
 let IMPORT_ROWS = [];
 let GENERATED_PIECES = [];
+let VENDOR_FROM_EXCEL = false;
 
 window.onload = () => setToday();
 
@@ -35,14 +36,26 @@ async function handleFileUpload(event){
 function loadWorkbook(wb){
   const sheetName=wb.SheetNames.find(x=>String(x).toLowerCase()==="import format")||wb.SheetNames[0];
   const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{defval:"",raw:false});
-  let lastVendor="";
+  const excelVendors = rows
+    .map(r => clean(getField(r,["Vendor Name","Vendor","Supplier Name","Supplier"])))
+    .filter(Boolean);
+
+  const uniqueExcelVendors = [...new Map(
+    excelVendors.map(v => [v.toLowerCase(), v])
+  ).values()];
+
+  if (uniqueExcelVendors.length > 1) {
+    throw new Error(
+      "More than one Vendor Name was found in the Excel. One purchase bill must contain only one vendor."
+    );
+  }
+
+  VENDOR_FROM_EXCEL = uniqueExcelVendors.length === 1;
+  const excelVendorName = VENDOR_FROM_EXCEL ? uniqueExcelVendors[0] : "";
 
   IMPORT_ROWS=rows.map((r,index)=>{
-    const vendor=clean(getField(r,["Vendor Name","Vendor","Supplier Name","Supplier"]));
-    if(vendor) lastVendor=vendor;
     return {
       RowNo:index+1,
-      VendorName:vendor||lastVendor,
       Particulars:clean(getField(r,["Particulars","Description","Item","Product"])),
       Qty:Number(getField(r,["Qty","Quantity","Pcs","No of Pcs"])||0),
       PurchasePrice:Number(getField(r,["Purchase Price","Purchase Rate","Rate","Cost"])||0),
@@ -55,33 +68,37 @@ function loadWorkbook(wb){
       Size:clean(getField(r,["Size"])),
       Remarks:clean(getField(r,["Remarks","Remark"]))
     };
-  }).filter(r=>r.VendorName||r.Particulars||r.Qty||r.PurchasePrice||r.SellingPrice);
+  }).filter(r=>r.Particulars||r.Qty||r.PurchasePrice||r.SellingPrice);
 
   GENERATED_PIECES=[];
   document.getElementById("print_btn").disabled=true;
-  refreshVendorHeader(); renderTable(); validateReady();
+  setTopVendorFromExcel(excelVendorName); renderTable(); validateReady();
 }
 
-function refreshVendorHeader(){
-  const vendors=[...new Set(IMPORT_ROWS.map(r=>clean(r.VendorName).toLowerCase()).filter(Boolean))];
-  if(vendors.length===1){ const first=IMPORT_ROWS.find(r=>clean(r.VendorName)); document.getElementById("vendor_name").value=first?.VendorName||""; }
-  else if(vendors.length>1) document.getElementById("vendor_name").value="MULTIPLE VENDORS";
-  else document.getElementById("vendor_name").value="";
+function setTopVendorFromExcel(excelVendorName){
+  const el=document.getElementById("vendor_name");
+  el.value=excelVendorName||"";
+  el.readOnly=!!excelVendorName;
+  el.title=excelVendorName
+    ? "Vendor Name loaded from Excel"
+    : "Vendor Name not found in Excel. Enter it here.";
 }
 
+function vendorNameChanged(){
+  validateReady();
+}
 function addBlankRow(){
-  const vendor=document.getElementById("vendor_name").value;
-  IMPORT_ROWS.push({RowNo:IMPORT_ROWS.length+1,VendorName:vendor==="MULTIPLE VENDORS"?"":vendor,Particulars:"",Qty:1,PurchasePrice:0,SellingPrice:0,MRP:0,Category:"",Material:"",Design:"",Colour:"",Size:"",Remarks:""});
+  IMPORT_ROWS.push({RowNo:IMPORT_ROWS.length+1,Particulars:"",Qty:1,PurchasePrice:0,SellingPrice:0,MRP:0,Category:"",Material:"",Design:"",Colour:"",Size:"",Remarks:""});
   renderTable(); validateReady();
 }
 
 function updateRow(i,field,value){
   const r=IMPORT_ROWS[i]; if(!r)return;
   if(["Qty","PurchasePrice","SellingPrice","MRP"].includes(field)) r[field]=Number(value||0); else r[field]=clean(value);
-  refreshVendorHeader(); renderTotals(); validateReady();
+  renderTotals(); validateReady();
 }
 
-function removeRow(i){ IMPORT_ROWS.splice(i,1); IMPORT_ROWS.forEach((r,n)=>r.RowNo=n+1); refreshVendorHeader(); renderTable(); validateReady(); }
+function removeRow(i){ IMPORT_ROWS.splice(i,1); IMPORT_ROWS.forEach((r,n)=>r.RowNo=n+1); renderTable(); validateReady(); }
 
 function applySellingToAll(){
   const price=Number(document.getElementById("apply_selling").value||0);
@@ -92,10 +109,9 @@ function applySellingToAll(){
 function renderTable(){
   const el=document.getElementById("import_table");
   if(!IMPORT_ROWS.length){ el.innerHTML='<div class="muted" style="padding:12px">No imported rows.</div>'; renderTotals(); return; }
-  el.innerHTML=`<table><thead><tr><th>#</th><th>Vendor Name</th><th>Particulars</th><th>Qty</th><th>Purchase</th><th>Selling *</th><th>MRP</th><th>Category</th><th>Material</th><th>Design</th><th>Colour</th><th>Size</th><th>Remarks</th><th></th></tr></thead><tbody>${IMPORT_ROWS.map((r,i)=>`
+  el.innerHTML=`<table><thead><tr><th>#</th><th>Particulars</th><th>Qty</th><th>Purchase</th><th>Selling *</th><th>MRP</th><th>Category</th><th>Material</th><th>Design</th><th>Colour</th><th>Size</th><th>Remarks</th><th></th></tr></thead><tbody>${IMPORT_ROWS.map((r,i)=>`
     <tr>
       <td>${i+1}</td>
-      <td><input class="mid" value="${escAttr(r.VendorName)}" onchange="updateRow(${i},'VendorName',this.value)"></td>
       <td><input class="wide" value="${escAttr(r.Particulars)}" onchange="updateRow(${i},'Particulars',this.value)"></td>
       <td><input class="small" type="number" min="1" step="1" value="${r.Qty||""}" onchange="updateRow(${i},'Qty',this.value)"></td>
       <td><input class="small" type="number" min="0" step=".01" value="${r.PurchasePrice||""}" onchange="updateRow(${i},'PurchasePrice',this.value)"></td>
@@ -122,9 +138,8 @@ function renderTotals(){
 function validateReady(){
   let error="";
   if(!IMPORT_ROWS.length) error="Upload purchase items first.";
-  const vendors=[...new Set(IMPORT_ROWS.map(r=>clean(r.VendorName).toLowerCase()).filter(Boolean))];
-  if(!error&&IMPORT_ROWS.some(r=>!clean(r.VendorName))) error="Vendor Name is required for every row.";
-  if(!error&&vendors.length!==1) error="Use only one vendor in one purchase Excel.";
+  const vendorName=clean(document.getElementById("vendor_name").value);
+  if(!error&&!vendorName) error="Enter Vendor Name at the top.";
   if(!error&&IMPORT_ROWS.some(r=>!Number.isInteger(Number(r.Qty))||Number(r.Qty)<=0)) error="Every row needs a valid whole-number Qty.";
   if(!error&&IMPORT_ROWS.some(r=>!Number.isFinite(Number(r.PurchasePrice))||Number(r.PurchasePrice)<=0)) error="Every row needs Purchase Price.";
   if(!error&&IMPORT_ROWS.some(r=>!Number.isFinite(Number(r.SellingPrice))||Number(r.SellingPrice)<=0)) error="Enter Selling Price for every row.";
@@ -145,7 +160,7 @@ async function generateBarcodes(){
       InvoiceNo:clean(document.getElementById("invoice_no").value),
       InvoiceDate:clean(document.getElementById("invoice_date").value),
       Remarks:clean(document.getElementById("purchase_remarks").value),
-      Items:IMPORT_ROWS.map(r=>({VendorName:r.VendorName,Particulars:r.Particulars,Qty:Number(r.Qty),PurchasePrice:Number(r.PurchasePrice),SellingPrice:Number(r.SellingPrice),MRP:Number(r.MRP||0),Category:r.Category,Material:r.Material,Design:r.Design,Colour:r.Colour,Size:r.Size,Remarks:r.Remarks}))
+      Items:IMPORT_ROWS.map(r=>({VendorName:clean(document.getElementById("vendor_name").value),Particulars:r.Particulars,Qty:Number(r.Qty),PurchasePrice:Number(r.PurchasePrice),SellingPrice:Number(r.SellingPrice),MRP:Number(r.MRP||0),Category:r.Category,Material:r.Material,Design:r.Design,Colour:r.Colour,Size:r.Size,Remarks:r.Remarks}))
     });
     GENERATED_PIECES=Array.isArray(res?.generatedPieces)?res.generatedPieces:[];
     msg("generate",res?.message||"Barcodes generated successfully.","ok");

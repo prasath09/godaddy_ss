@@ -41,7 +41,7 @@
     <h3>1. Upload Purchase Excel</h3>
     <div class="upload-box">
       <input id="excel_file" type="file" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
-      <div class="note" style="margin-top:12px">Required in Excel: <strong>Vendor Name, Qty, Purchase Price</strong>. Particulars, Category, MRP, Material, Design, Colour, Size and Remarks are optional. Selling Price can be entered after upload.</div>
+      <div class="note" style="margin-top:12px">Required in Excel: <strong>Qty and Purchase Price</strong>. Vendor Name is optional in Excel. Particulars, Category, MRP, Material, Design, Colour, Size and Remarks are optional. Selling Price can be entered after upload.</div>
     </div>
     <div id="msg_upload" class="msg"></div>
   </div>
@@ -49,7 +49,7 @@
   <div class="card">
     <h3>2. Purchase Details</h3>
     <div class="form-grid">
-      <div><label>Vendor Name *</label><input id="vendor_name" readonly></div>
+      <div><label>Vendor Name *</label><input id="vendor_name" placeholder="Enter Vendor Name" oninput="vendorNameChanged()"></div>
       <div><label>Invoice No. (optional)</label><input id="invoice_no" placeholder="Auto-generated if blank"></div>
       <div><label>Invoice Date</label><input id="invoice_date" type="date"></div>
       <div><label>Purchase Remarks</label><input id="purchase_remarks"></div>
