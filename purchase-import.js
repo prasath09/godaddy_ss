@@ -202,14 +202,20 @@ function printGeneratedStickers(pieces){
   if(!Array.isArray(pieces)||!pieces.length)return alert("No saved piece barcodes for this row.");
   if(typeof JsBarcode!=="function")return alert("Barcode library has not loaded. Check your internet connection and retry.");
   const area=document.getElementById("printArea"); area.innerHTML="";
-  pieces.forEach(piece=>{
+  let sheet;
+  pieces.forEach((piece,index)=>{
+    if(index % 24 === 0){
+      sheet=document.createElement("div"); sheet.className="sticker-sheet";
+      area.appendChild(sheet);
+    }
     const div=document.createElement("div"); div.className="barcode-label";
     div.innerHTML=`<div class="label-category">${esc(piece.CategoryName||"")}</div><div class="label-description">${esc(piece.Particulars||"")}</div><div class="price">${money(piece.SellingPrice)}</div><svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg><div class="label-code">${esc(piece.PieceBarcode)}</div><div class="label-mrp">MRP ${money(piece.MRP)}</div>`;
-    area.appendChild(div);
+    sheet.appendChild(div);
   });
   area.style.display="none";
+  try{
   area.querySelectorAll(".barcode-svg").forEach(svg=>{
-    JsBarcode(svg,svg.dataset.barcode,{format:"CODE128",displayValue:false,width:1.15,height:30,margin:0,marginLeft:12,marginRight:12});
+    JsBarcode(svg,svg.dataset.barcode,{format:"CODE128",displayValue:false,width:1.5,height:42,margin:0,marginLeft:12,marginRight:12});
     // Scale the complete symbol, including quiet zones, inside the label.
     const width=Number(svg.getAttribute('width'));
     const height=Number(svg.getAttribute('height'));
@@ -217,7 +223,11 @@ function printGeneratedStickers(pieces){
     svg.setAttribute('preserveAspectRatio','xMidYMid meet');
     svg.removeAttribute('width'); svg.removeAttribute('height');
   });
-  setTimeout(()=>window.print(),120);
+  }catch(error){
+    area.innerHTML="";
+    return alert("Could not generate barcode labels: "+error.message);
+  }
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
 }
 
 function clearImport(){

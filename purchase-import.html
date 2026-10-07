@@ -22,15 +22,24 @@
     th,td{padding:7px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}th{position:sticky;top:0;z-index:2;background:#fff;color:var(--muted);font-size:10px;text-transform:uppercase}
     td input{min-width:90px;padding:7px}.wide{min-width:220px}.mid{min-width:125px}.small{min-width:80px}.required{border-color:#f59e0b;background:#fffbeb}
     .summarybar{display:flex;gap:20px;flex-wrap:wrap;padding-top:12px;font-size:13px}.summarybar strong{font-size:16px}#printArea{display:none}
-    .barcode-label{width:47.5mm;height:26mm;border:.2mm solid #bbb;padding:1.3mm 2mm;text-align:center;background:#fff;overflow:hidden;break-inside:avoid;page-break-inside:avoid;display:grid;grid-template-rows:2.6mm 3mm 3.8mm 8mm 2.8mm 2mm;justify-items:center;align-items:center;font-size:8px;line-height:1;color:#000}
-    .label-category{font-weight:700;font-size:8px;width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-    .label-description{font-size:7px;width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-    .barcode-label .price{font-size:11px;font-weight:700;margin:0}
-    .barcode-svg{display:block;width:100%;max-width:42mm;height:8mm;min-width:0}
-    .label-code{font-family:Arial,sans-serif;font-size:8px;white-space:nowrap}
-    .label-mrp{font-size:7px;white-space:nowrap}
-    @page{size:A4 portrait;margin:7mm}
-    @media print{html,body{margin:0!important;padding:0!important;background:#fff!important}.shell{display:none!important}#printArea{display:grid!important;position:static;width:196mm;margin:0;padding:0;grid-template-columns:repeat(4,47.5mm);grid-auto-rows:26mm;gap:2mm;align-content:start;justify-content:start}.barcode-label{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    /* NOVAJET 24L: 64 x 34 mm, 67 mm horizontal pitch. */
+    .sticker-sheet{display:grid;width:198mm;height:272mm;grid-template-columns:repeat(3,64mm);grid-template-rows:repeat(8,34mm);column-gap:3mm;row-gap:0;align-content:start}
+    .barcode-label{box-sizing:border-box;width:64mm;height:34mm;border:0;padding:2mm 3mm;text-align:center;background:#fff;overflow:hidden;break-inside:avoid;page-break-inside:avoid;display:grid;grid-template-rows:2.5mm 3mm 4mm 11mm 3mm 2mm;justify-items:center;align-items:center;align-content:center;font:9px/1 Arial,sans-serif;color:#000}
+    .label-category{font-weight:700;font-size:9px;width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .label-description{font-size:8px;width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .barcode-label .price{font-size:15px;font-weight:700;margin:0}
+    .barcode-svg{display:block;width:58mm;max-width:100%;height:11mm;min-width:0}
+    .label-code{font-family:Arial,sans-serif;font-size:10px;white-space:nowrap}
+    .label-mrp{font-size:8px;white-space:nowrap}
+    @page{size:A4 portrait;margin:12.5mm 6mm}
+    @media print{
+      html,body{margin:0!important;padding:0!important;background:#fff!important}
+      body > :not(#printArea){display:none!important}
+      #printArea{display:block!important;position:static;width:198mm;margin:0;padding:0}
+      .sticker-sheet{break-inside:avoid;page-break-inside:avoid;break-after:page;page-break-after:always}
+      .sticker-sheet:last-child{break-after:auto;page-break-after:auto}
+      .barcode-label{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
     @media(max-width:900px){.form-grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
   </style>
   <script src="textile-config.js"></script>

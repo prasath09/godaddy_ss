@@ -658,79 +658,11 @@ function printStickers() {
     return;
   }
 
-  const area =
-    document.getElementById(
-      'printArea'
-    );
-
-  area.innerHTML = '';
-
-  for (
-    let i = 0;
-    i < qty;
-    i++
-  ) {
-    const div =
-      document.createElement('div');
-
-    div.className =
-      'barcode-label';
-
-    div.innerHTML = `
-      <div class="label-vendor">
-        ${esc(tier.VendorName || '')}
-      </div>
-
-      <div class="label-meta">
-        ${esc(tier.CategoryName || '')}
-        ·
-        ${esc(tier.TierName || '')}
-      </div>
-
-      <div class="label-price">
-        ${money(tier.SellingPrice)}
-      </div>
-
-      <svg
-        class="barcode-svg"
-        data-barcode="${escAttr(barcode)}">
-      </svg>
-
-      <div class="label-mrp">
-        MRP ${money(tier.MRP)}
-      </div>
-    `;
-
-    area.appendChild(div);
-  }
-
-  area.style.display =
-    'grid';
-
-  area
-    .querySelectorAll(
-      '.barcode-svg'
-    )
-    .forEach(svg => {
-      JsBarcode(
-        svg,
-        svg.dataset.barcode,
-        {
-          format:'CODE128',
-          displayValue:true,
-          fontSize:9,
-          width:1.15,
-          height:25,
-          margin:0,
-          textMargin:1
-        }
-      );
-    });
-
-  setTimeout(
-    () => window.print(),
-    120
-  );
+  printNovajetLabels(Array.from({length:qty},()=>({
+    vendor:tier.VendorName||'',
+    meta:[tier.CategoryName,tier.TierName].filter(Boolean).join(' · '),
+    price:tier.SellingPrice,mrp:tier.MRP,barcode:barcode
+  })));
 }
 
 
@@ -802,73 +734,52 @@ function printLastGeneratedStickers() {
     alert('No newly generated piece barcodes to print.');
     return;
   }
+  printNovajetLabels(LAST_GENERATED_PIECES.map(piece=>({
+    vendor:piece.VendorName||'',
+    meta:[piece.CategoryName,piece.TierCode,piece.BatchNo].filter(Boolean).join(' · '),
+    price:piece.SellingPrice,mrp:piece.MRP,barcode:piece.PieceBarcode
+  })));
+}
 
-  const area =
-    document.getElementById('printArea');
-
-  area.innerHTML = '';
-
-  LAST_GENERATED_PIECES.forEach(piece => {
-    const div =
-      document.createElement('div');
-
-    div.className =
-      'barcode-label';
-
-    div.innerHTML = `
-      <div class="label-vendor">
-        ${esc(piece.VendorName || '')}
-      </div>
-
-      <div class="label-meta">
-        ${esc(piece.CategoryName || '')}
-        ·
-        ${esc(piece.TierCode || '')}
-        ·
-        ${esc(piece.BatchNo || '')}
-      </div>
-
-      <div class="label-price">
-        ${money(piece.SellingPrice)}
-      </div>
-
-      <svg
-        class="barcode-svg"
-        data-barcode="${escAttr(piece.PieceBarcode)}">
-      </svg>
-
-      <div class="label-mrp">
-        MRP ${money(piece.MRP)}
-      </div>
-    `;
-
-    area.appendChild(div);
+function printNovajetLabels(labels){
+  if(typeof JsBarcode!=='function'){
+    alert('Barcode library has not loaded. Reload the page and retry.');
+    return;
+  }
+  const area=document.getElementById('printArea');
+  area.innerHTML='';
+  document.body.appendChild(area);
+  let sheet;
+  labels.forEach((label,index)=>{
+    if(index % 24 === 0){
+      sheet=document.createElement('div');sheet.className='sticker-sheet';
+      area.appendChild(sheet);
+    }
+    const div=document.createElement('div');div.className='barcode-label';
+    div.innerHTML=`<div class="label-vendor">${esc(label.vendor)}</div>
+      <div class="label-meta">${esc(label.meta)}</div>
+      <div class="label-price">${money(label.price)}</div>
+      <svg class="barcode-svg" data-barcode="${escAttr(label.barcode)}"></svg>
+      <div class="label-mrp">MRP ${money(label.mrp)}</div>`;
+    sheet.appendChild(div);
   });
-
-  area.style.display = 'block';
-
-  area
-    .querySelectorAll('.barcode-svg')
-    .forEach(svg => {
-      JsBarcode(
-        svg,
-        svg.dataset.barcode,
-        {
-          format:'CODE128',
-          displayValue:true,
-          fontSize:9,
-          width:1.15,
-          height:25,
-          margin:0,
-          textMargin:1
-        }
-      );
+  try{
+    area.querySelectorAll('.barcode-svg').forEach(svg=>{
+      JsBarcode(svg,svg.dataset.barcode,{
+        format:'CODE128',displayValue:true,width:2,height:48,
+        font:'Arial',fontSize:14,textMargin:3,
+        margin:0,marginLeft:12,marginRight:12,marginTop:2,marginBottom:2,
+        background:'#ffffff',lineColor:'#000000'
+      });
     });
-
-  setTimeout(
-    () => window.print(),
-    120
-  );
+  }catch(error){
+    area.innerHTML='';
+    alert('Could not generate barcode labels: '+error.message);
+    return;
+  }
+  area.style.display='none';
+  window.addEventListener('afterprint',()=>{area.innerHTML='';},{once:true});
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
 }
 
 
