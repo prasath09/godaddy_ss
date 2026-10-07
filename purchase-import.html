@@ -22,9 +22,15 @@
     th,td{padding:7px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}th{position:sticky;top:0;z-index:2;background:#fff;color:var(--muted);font-size:10px;text-transform:uppercase}
     td input{min-width:90px;padding:7px}.wide{min-width:220px}.mid{min-width:125px}.small{min-width:80px}.required{border-color:#f59e0b;background:#fffbeb}
     .summarybar{display:flex;gap:20px;flex-wrap:wrap;padding-top:12px;font-size:13px}.summarybar strong{font-size:16px}#printArea{display:none}
-    .barcode-label{width:48mm;height:26mm;border:.2mm solid #bbb;padding:1.5mm 1.5mm 1mm;text-align:center;background:#fff;overflow:hidden;page-break-inside:avoid;break-inside:avoid;font-size:8px;line-height:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center}
-    .barcode-label .price{font-size:11px;font-weight:700;margin:.6mm 0 .3mm}@page{size:A4 portrait;margin:7mm}
-    @media print{body *{visibility:hidden!important}#printArea,#printArea *{visibility:visible!important}#printArea{display:grid!important;position:absolute;left:0;top:0;width:196mm;grid-template-columns:repeat(4,48mm);grid-auto-rows:26mm;column-gap:1.33mm;row-gap:1mm;align-content:start;justify-content:start}}
+    .barcode-label{width:47.5mm;height:26mm;border:.2mm solid #bbb;padding:1.3mm 2mm;text-align:center;background:#fff;overflow:hidden;break-inside:avoid;page-break-inside:avoid;display:grid;grid-template-rows:2.6mm 3mm 3.8mm 8mm 2.8mm 2mm;justify-items:center;align-items:center;font-size:8px;line-height:1;color:#000}
+    .label-category{font-weight:700;font-size:8px;width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .label-description{font-size:7px;width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .barcode-label .price{font-size:11px;font-weight:700;margin:0}
+    .barcode-svg{display:block;width:100%;max-width:42mm;height:8mm;min-width:0}
+    .label-code{font-family:Arial,sans-serif;font-size:8px;white-space:nowrap}
+    .label-mrp{font-size:7px;white-space:nowrap}
+    @page{size:A4 portrait;margin:7mm}
+    @media print{html,body{margin:0!important;padding:0!important;background:#fff!important}.shell{display:none!important}#printArea{display:grid!important;position:static;width:196mm;margin:0;padding:0;grid-template-columns:repeat(4,47.5mm);grid-auto-rows:26mm;gap:2mm;align-content:start;justify-content:start}.barcode-label{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
     @media(max-width:900px){.form-grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
   </style>
   <script src="textile-config.js"></script>
@@ -80,9 +86,10 @@
     </div>
     <div id="msg_generate" class="msg"></div>
     <div id="generated_summary" class="note" style="margin-top:12px">No purchase added yet.</div>
-    <div id="printArea"></div>
+
   </div>
 </div>
+<div id="printArea"></div>
 <script src="purchase-import.js"></script>
 </body>
 </html>

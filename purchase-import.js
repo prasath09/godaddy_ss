@@ -203,11 +203,19 @@ function printGeneratedStickers(pieces){
   const area=document.getElementById("printArea"); area.innerHTML="";
   pieces.forEach(piece=>{
     const div=document.createElement("div"); div.className="barcode-label";
-    div.innerHTML=`<div style="font-weight:700">${esc(piece.CategoryName||"")}</div><div>${esc(piece.Particulars||"")} · ${esc(piece.TierCode||"")} · ${esc(piece.BatchNo||"")}</div><div class="price">${money(piece.SellingPrice)}</div><svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg><div style="font-size:6.5px">MRP ${money(piece.MRP)}</div>`;
+    div.innerHTML=`<div class="label-category">${esc(piece.CategoryName||"")}</div><div class="label-description">${esc(piece.Particulars||"")}</div><div class="price">${money(piece.SellingPrice)}</div><svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg><div class="label-code">${esc(piece.PieceBarcode)}</div><div class="label-mrp">MRP ${money(piece.MRP)}</div>`;
     area.appendChild(div);
   });
   area.style.display="none";
-  area.querySelectorAll(".barcode-svg").forEach(svg=>JsBarcode(svg,svg.dataset.barcode,{format:"CODE128",displayValue:true,fontSize:9,width:1.15,height:25,margin:0,textMargin:1}));
+  area.querySelectorAll(".barcode-svg").forEach(svg=>{
+    JsBarcode(svg,svg.dataset.barcode,{format:"CODE128",displayValue:false,width:1.15,height:30,margin:0,marginLeft:12,marginRight:12});
+    // Scale the complete symbol, including quiet zones, inside the label.
+    const width=Number(svg.getAttribute('width'));
+    const height=Number(svg.getAttribute('height'));
+    svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+    svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+    svg.removeAttribute('width'); svg.removeAttribute('height');
+  });
   setTimeout(()=>window.print(),120);
 }
 
