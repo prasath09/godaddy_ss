@@ -33,8 +33,8 @@
 <body>
 <div class="shell">
   <div class="top">
-    <div><h1>Purchase Excel Import</h1><div class="sub">Upload Excel → enter selling price → generate stock and individual barcodes</div></div>
-    <button class="btn secondary" onclick="clearImport()">Clear</button>
+    <div><h1>Purchase Excel Import</h1><div class="sub">Upload Excel → review items → add purchase → print barcodes by row</div></div>
+    <button class="btn secondary" onclick="clearImport()">Clean</button>
   </div>
 
   <div class="card">
@@ -58,8 +58,8 @@
 
   <div class="card">
     <h3>3. Review Items & Enter Selling Price</h3>
-    <div class="note"><strong>Code</strong> and <strong>Selling Price</strong> must be completed before generation. If Category is blank, the backend uses <strong>GENERAL</strong>. If MRP is blank, MRP becomes the Selling Price.</div>
-    <div class="actions">
+    <div class="note"><strong>Code</strong> and <strong>Selling Price</strong> must be completed before adding the purchase. If Category is blank, the backend uses <strong>GENERAL</strong>. If MRP is blank, MRP becomes the Selling Price.</div>
+    <div class="actions" id="review_actions">
       <input id="apply_code" type="text" maxlength="20" placeholder="Code for all, e.g. JT1"
              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')" style="width:180px">
       <button class="btn secondary" onclick="applyCodeToAll()">Apply Code to All</button>
@@ -73,13 +73,13 @@
   </div>
 
   <div class="card">
-    <h3>4. Generate Stock & Barcodes</h3>
+    <h3>4. Add Purchase & Print Row Barcodes</h3>
     <div class="actions">
-      <button id="generate_btn" class="btn primary" onclick="generateBarcodes()" disabled>Generate Barcodes</button>
-      <button id="print_btn" class="btn secondary" onclick="printGeneratedStickers()" disabled>Print Generated Stickers</button>
+      <button id="generate_btn" class="btn primary" onclick="addPurchase()" disabled>Add Purchase</button>
+      <button class="btn secondary" onclick="clearImport()">Clean</button>
     </div>
     <div id="msg_generate" class="msg"></div>
-    <div id="generated_summary" class="note" style="margin-top:12px">No barcodes generated yet.</div>
+    <div id="generated_summary" class="note" style="margin-top:12px">No purchase added yet.</div>
     <div id="printArea"></div>
   </div>
 </div>
