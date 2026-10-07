@@ -680,67 +680,54 @@ function setLastGeneratedPieces(pieces){
 
 
 function printLastGeneratedStickers(){
-
   if(!LAST_GENERATED_PIECES.length){
-
     alert('No newly generated piece barcodes to print.');
-
     return;
-
   }
-
-
-
+  if(typeof JsBarcode !== 'function'){
+    alert('Barcode library has not loaded. Check your connection and reload the page.');
+    return;
+  }
   const area=document.getElementById('printArea');
-
   area.innerHTML='';
-
-
-
-  LAST_GENERATED_PIECES.forEach(piece=>{
-
+  // A direct body child lets print CSS remove the application completely.
+  document.body.appendChild(area);
+  let sheet;
+  LAST_GENERATED_PIECES.forEach((piece,index)=>{
+    if(index % 24 === 0){
+      sheet=document.createElement('div');
+      sheet.className='sticker-sheet';
+      area.appendChild(sheet);
+    }
     const div=document.createElement('div');
-
     div.className='barcode-label';
-
     div.innerHTML=`
-
-      <div style="font-weight:700">${esc(piece.VendorName||'')}</div>
-
-      <div>${esc(piece.CategoryName||'')} · ${esc(piece.TierCode||'')} · ${esc(piece.BatchNo||'')}</div>
-
+      <div class="label-vendor">${esc(piece.VendorName||'')}</div>
+      <div class="label-details">${esc(piece.CategoryName||'')} · ${esc(piece.TierCode||'')} · ${esc(piece.BatchNo||'')}</div>
       <div class="label-price">${money(piece.SellingPrice)}</div>
-
       <svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg>
-
-      <div style="font-size:10px;color:#666">MRP ${money(piece.MRP)}</div>`;
-
-    area.appendChild(div);
-
+      <div class="label-mrp">MRP ${money(piece.MRP)}</div>`;
+    sheet.appendChild(div);
   });
-
-
-
-  area.style.display='grid';
-
-
-
-  area.querySelectorAll('.barcode-svg').forEach(svg=>{
-
-    JsBarcode(svg,svg.dataset.barcode,{
-
-      format:'CODE128',displayValue:true,height:42,margin:3
-
+  try{
+    area.querySelectorAll('.barcode-svg').forEach(svg=>{
+      JsBarcode(svg,svg.dataset.barcode,{
+        format:'CODE128',displayValue:true,width:2,height:48,
+        font:'Arial',fontSize:14,textMargin:3,
+        margin:0,marginLeft:12,marginRight:12,marginTop:2,marginBottom:2,
+        background:'#ffffff',lineColor:'#000000'
+      });
     });
-
-  });
-
-
-
-  setTimeout(()=>window.print(),120);
-
+  }catch(error){
+    area.innerHTML='';
+    alert('Could not generate the barcode labels: '+error.message);
+    return;
+  }
+  window.addEventListener('afterprint',()=>{area.style.display='none';},{once:true});
+  // Printing is visible only under @media print; keep the purchase page clean.
+  area.style.display='none';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
 }
-
 
 
 function loadRecentPurchases(){
