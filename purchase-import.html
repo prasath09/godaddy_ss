@@ -39,7 +39,7 @@
 <body>
 <div class="shell">
   <div class="top">
-    <div><h1>Purchase Excel Import</h1><div class="sub">Upload Excel → review items → add purchase → print barcodes by row</div></div>
+    <div><h1>Purchase Excel Import</h1><div class="sub">Upload Excel → enter Tier Code & Selling Price → print Tier / Master Barcode → add purchase</div></div>
     <button class="btn secondary" onclick="clearImport()">Clean</button>
   </div>
 
@@ -64,11 +64,11 @@
 
   <div class="card">
     <h3>3. Review Items & Enter Selling Price</h3>
-    <div class="note"><strong>Code</strong> and <strong>Selling Price</strong> must be completed before adding the purchase. If Category is blank, the backend uses <strong>GENERAL</strong>. If MRP is blank, MRP becomes the Selling Price.</div>
+    <div class="note"><strong>Tier Code</strong> and <strong>Selling Price</strong> must be completed before adding the purchase. Each row’s <strong>Generate Barcode</strong> button prints the <strong>Tier Code alone</strong> as the Tier / Master Barcode, with one label per quantity. Printing does not save stock. Click <strong>Add Purchase</strong> to save stock. If Category is blank, the backend uses <strong>GENERAL</strong>. If MRP is blank, MRP becomes the Selling Price.</div>
     <div class="actions" id="review_actions">
-      <input id="apply_code" type="text" maxlength="20" placeholder="Code for all, e.g. JT1"
+      <input id="apply_code" type="text" maxlength="20" placeholder="Tier Code for all, e.g. JT1"
              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')" style="width:180px">
-      <button class="btn secondary" onclick="applyCodeToAll()">Apply Code to All</button>
+      <button class="btn secondary" onclick="applyCodeToAll()">Apply Tier Code to All</button>
       <input id="apply_selling" type="number" min="0" step="0.01" placeholder="Selling price for all" style="width:180px">
       <button class="btn secondary" onclick="applySellingToAll()">Apply Selling to All</button>
       <button class="btn secondary" onclick="addBlankRow()">+ Add Row</button>
