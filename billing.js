@@ -1,3 +1,16 @@
+// Group receipt rows only; saved sale items retain individual piece barcodes.
+function groupedReceiptItems(items) {
+  const groups=new Map();
+  for(const item of items||[]) {
+    const barcode=String(item.Barcode||'');
+    const code=barcode.replace(/-B[0-9]+-[0-9]+$/i,'').replace(/-[0-9]+$/,'') || item.TierCode || item.TierName || '';
+    const key=JSON.stringify([code,item.CategoryID||item.CategoryName,item.VendorID,Number(item.Rate||0),Number(item.DiscountPct||0)]);
+    if(!groups.has(key)) groups.set(key,{...item,TierName:code,DisplayCode:code,Qty:0,LineTotal:0,DiscountAmount:0});
+    const row=groups.get(key);row.Qty+=Number(item.Qty||1);row.LineTotal+=Number(item.LineTotal||0);row.DiscountAmount+=Number(item.DiscountAmount||0);
+  }
+  return [...groups.values()];
+}
+
 let POS_CART = [];
 
 let LAST_SALE_ID = '';
@@ -1925,7 +1938,7 @@ function downloadReceiptPDF(data) {
 
   const items =
 
-    data.items || [];
+    groupedReceiptItems(data.items || []);
 
 
 
@@ -1987,7 +2000,7 @@ function downloadReceiptPDF(data) {
 
   doc.text(
 
-    'SS TEXTILE',
+    'SS BRANDED OUTLET',
 
     pageWidth / 2,
 
@@ -2014,28 +2027,6 @@ function downloadReceiptPDF(data) {
 
 
   doc.setFontSize(10);
-
-
-
-  if (data.locationName) {
-
-    doc.text(
-
-      String(data.locationName),
-
-      pageWidth / 2,
-
-      y,
-
-      {align:'center'}
-
-    );
-
-
-
-    y += 5;
-
-  }
 
 
 
@@ -2367,26 +2358,6 @@ function downloadReceiptPDF(data) {
 
 
 
-    doc.setFontSize(8);
-
-
-
-    doc.text(
-
-      String(i.Barcode || ''),
-
-      left,
-
-      y
-
-    );
-
-
-
-    doc.setFontSize(10);
-
-
-
     y += 6;
 
   });
@@ -2709,7 +2680,7 @@ function buildReceiptHtml(data) {
 
   const items =
 
-    data.items || [];
+    groupedReceiptItems(data.items || []);
 
 
 
@@ -2735,13 +2706,7 @@ function buildReceiptHtml(data) {
 
             ${esc(i.TierName)}
 
-            <br>
 
-            <small>
-
-              ${esc(i.Barcode)}
-
-            </small>
 
           </td>
 
@@ -2907,15 +2872,11 @@ function buildReceiptHtml(data) {
 
 
 
-      <h2>SS TEXTILE</h2>
+      <h2>SS BRANDED OUTLET</h2>
 
 
 
-      <div class="center">
 
-        ${esc(data.locationName || '')}
-
-      </div>
 
 
 
