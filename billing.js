@@ -780,15 +780,7 @@ function renderPOSCart() {
 
 
 
-              const displayCode =
-
-                x.TierCode ||
-
-                x.SourceBarcode ||
-
-                x.TierName ||
-
-                '';
+              const displayCode = (x.Pieces || []).join(', ') || x.SourceBarcode || x.TierCode || ''; 
 
 
 
@@ -1118,11 +1110,7 @@ function updatePOSQty(index, value) {
 
 
 
-  const lookupCode =
-
-    row.TierCode ||
-
-    row.SourceBarcode;
+  const lookupCode = row.PriceTierID ? 'PRICE_TIER_ID:'+row.PriceTierID : (row.TierCode || row.SourceBarcode);
 
 
 

@@ -13,14 +13,14 @@
     h1{margin:0;font-size:24px}h3{margin-top:0}.sub{color:var(--muted);font-size:13px;margin-top:5px}
     .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
     .form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
-    input{width:100%;padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff}input[readonly]{background:#f9fafb}
+    input,select{width:100%;padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff}input[readonly]{background:#f9fafb}
     .upload-box{border:2px dashed #cbd5e1;border-radius:12px;padding:22px;text-align:center;background:#fafafa}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{border:0;border-radius:8px;padding:10px 15px;cursor:pointer;font-weight:700}
     .btn.primary{background:var(--primary);color:#fff}.btn.secondary{background:var(--soft);color:#1d4ed8}.btn.danger{background:#fef2f2;color:var(--danger)}.btn:disabled{opacity:.55;cursor:not-allowed}
     .note{padding:10px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px}.msg{min-height:18px;margin-top:10px;font-size:13px}.ok{color:var(--ok)}.err{color:var(--danger)}.warn{color:var(--warn)}.muted{color:var(--muted)}
     .table-wrap{overflow:auto;max-height:620px;border:1px solid var(--border);border-radius:10px}table{width:100%;border-collapse:collapse;font-size:12px;min-width:1380px}
     th,td{padding:7px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}th{position:sticky;top:0;z-index:2;background:#fff;color:var(--muted);font-size:10px;text-transform:uppercase}
-    td input{min-width:90px;padding:7px}.wide{min-width:220px}.mid{min-width:125px}.small{min-width:80px}.required{border-color:#f59e0b;background:#fffbeb}
+    td input,td select{min-width:90px;padding:7px}.wide{min-width:220px}.mid{min-width:125px}.small{min-width:80px}.required{border-color:#f59e0b;background:#fffbeb}
     .summarybar{display:flex;gap:20px;flex-wrap:wrap;padding-top:12px;font-size:13px}.summarybar strong{font-size:16px}#printArea{display:none}
     /* NOVAJET 24L: 64 x 34 mm, 67 mm horizontal pitch. */
     .sticker-sheet{display:grid;width:198mm;height:272mm;grid-template-columns:repeat(3,64mm);grid-template-rows:repeat(8,34mm);column-gap:3mm;row-gap:0;align-content:start}
@@ -52,7 +52,7 @@
 <body>
 <div class="shell">
   <div class="top">
-    <div><h1>Purchase Excel Import</h1><div class="sub">Upload Excel → enter Tier Code & Selling Price → print Tier / Master Barcode → add purchase</div></div>
+    <div><h1>Purchase Excel Import</h1><div class="sub">Upload Excel → select Category & Tier → save purchase → print saved Dress Codes</div></div>
     <button class="btn secondary" onclick="clearImport()">Clean</button>
   </div>
 
@@ -60,7 +60,7 @@
     <h3>1. Upload Purchase Excel</h3>
     <div class="upload-box">
       <input id="excel_file" type="file" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
-      <div class="note" style="margin-top:12px">Required in Excel: <strong>Qty and Purchase Price</strong>. Vendor Name is optional in Excel. Particulars, Category, MRP, Material, Design, Colour, Size and Remarks are optional. Selling Price can be entered after upload.</div>
+      <div class="note" style="margin-top:12px">Required in Excel: <strong>Qty and Purchase Price</strong>. Vendor Name is optional in Excel. Particulars, Category, MRP, Material, Design, Colour, Size and Remarks are optional. Select saved Category and Tier after upload; selling price fills automatically. Dress Prefix (e.g. B) is optional in Excel.</div>
     </div>
     <div id="msg_upload" class="msg"></div>
   </div>
@@ -68,7 +68,7 @@
   <div class="card">
     <h3>2. Purchase Details</h3>
     <div class="form-grid">
-      <div><label>Vendor Name *</label><input id="vendor_name" placeholder="Enter Vendor Name" oninput="vendorNameChanged()"></div>
+      <div><label>Vendor Name *</label><select id="vendor_name" onchange="vendorNameChanged()"><option value="">Select Vendor</option></select></div>
       <div><label>Invoice No. (optional)</label><input id="invoice_no" placeholder="Auto-generated if blank"></div>
       <div><label>Invoice Date</label><input id="invoice_date" type="date"></div>
       <div><label>Purchase Remarks</label><input id="purchase_remarks"></div>
@@ -76,31 +76,28 @@
   </div>
 
   <div class="card">
-    <h3>3. Review Items & Enter Selling Price</h3>
-    <div class="note"><strong>Tier Code</strong> and <strong>Selling Price</strong> must be completed before adding the purchase. Each row’s <strong>Generate Barcode</strong> button prints the <strong>Tier Code alone</strong> as the Tier / Master Barcode, with one label per quantity. Printing does not save stock. Click <strong>Add Purchase</strong> to save stock. If Category is blank, the backend uses <strong>GENERAL</strong>. If MRP is blank, MRP becomes the Selling Price.</div>
-    <div class="actions" id="review_actions">
-      <input id="apply_code" type="text" maxlength="20" placeholder="Tier Code for all, e.g. JT1"
-             oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')" style="width:180px">
-      <button class="btn secondary" onclick="applyCodeToAll()">Apply Tier Code to All</button>
-      <input id="apply_selling" type="number" min="0" step="0.01" placeholder="Selling price for all" style="width:180px">
-      <button class="btn secondary" onclick="applySellingToAll()">Apply Selling to All</button>
-      <button class="btn secondary" onclick="addBlankRow()">+ Add Row</button>
-    </div>
+    <h3>3. Review Stock Items</h3>
+    <div class="note">Select Category → relevant Tier Code. Selling price fills automatically. Enter purchase price, quantity and Dress Prefix (B). Dress Codes such as BT1-001 are assigned and saved when you add the purchase.</div>
+    <div class="actions" id="review_actions"><button class="btn secondary" onclick="addBlankRow()">+ Add Row</button></div>
     <div id="import_table" class="table-wrap" style="margin-top:12px"><div class="muted" style="padding:12px">Upload an Excel file first.</div></div>
     <div id="import_totals" class="summarybar"></div>
     <div id="msg_review" class="msg"></div>
   </div>
 
   <div class="card">
-    <h3>4. Add Purchase & Print Row Barcodes</h3>
+    <h3>4. Save Purchase & Print Dress Barcodes</h3>
     <div class="actions">
-      <button id="generate_btn" class="btn primary" onclick="addPurchase()" disabled>Add Purchase</button>
+      <button id="generate_btn" class="btn primary" onclick="addPurchase()" disabled>Add Purchase & Generate Barcodes</button>
       <button class="btn secondary" onclick="clearImport()">Clean</button>
     </div>
     <div id="msg_generate" class="msg"></div>
     <div id="generated_summary" class="note" style="margin-top:12px">No purchase added yet.</div>
 
   </div>
+<div class="card"><h3>5. Saved Barcodes & Reprint by Invoice</h3>
+<div class="form-grid"><div><label>Vendor</label><select id="reprint_vendor"></select></div><div><label>Supplier Invoice No.</label><input id="reprint_invoice" placeholder="Enter exact invoice number"></div></div>
+<div class="actions"><button id="load_saved_btn" class="btn secondary" onclick="loadInvoiceBarcodes()">Load Saved Barcodes</button><button id="print_saved_btn" class="btn secondary" onclick="printSelectedBarcodes()" disabled>Print Selected Stickers</button></div>
+<div id="msg_reprint" class="msg"></div><div id="saved_barcode_list" class="table-wrap" style="margin-top:12px"></div></div>
 </div>
 <div id="printArea"></div>
 <script src="purchase-import.js"></script>

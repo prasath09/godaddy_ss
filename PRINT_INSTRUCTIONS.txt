@@ -1,0 +1,4 @@
+Replace index.html and app.js; keep other dependencies. No server.js change. Refresh with Ctrl+F5.
+NOVAJET 24L: 64 x 34 mm, 3 columns x 8 rows; horizontal gap 3 mm, vertical gap 0. Margins: left/right 6 mm, top/bottom 12.5 mm.
+Print A4 portrait at 100% / Actual size, headers and footers OFF, CSS/default margins. Test plain paper against the sticker sheet first.
+Both Print Stickers and Print Last Generated Stickers use this layout.

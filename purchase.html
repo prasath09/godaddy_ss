@@ -167,7 +167,7 @@
 
         <label>Purchase Vendor</label>
 
-        <input id="purchase_vendor_display" readonly placeholder="Set automatically from scanned Tier Code">
+        <select id="purchase_vendor_display"></select>
 
       </div>
 
@@ -193,7 +193,7 @@
 
       Scan or type the exact Tier Code (example: JT1) and press Enter.
 
-      Only that Tier record is fetched from the database.
+      Or choose Category → Tier Code below. Enter purchase price and dress prefix; saving generates permanent Dress Codes.
 
     </div>
 
@@ -217,6 +217,14 @@
 
 
 
+    <div class="form-grid" style="margin-top:14px">
+      <div><label>Category *</label><select id="pur_category" onchange="fillStandaloneTiers()"></select></div>
+      <div><label>Tier Code *</label><select id="pur_tier" onchange="selectStandaloneTier()"></select></div>
+      <div><label>Selling Price (automatic)</label><input id="pur_selling" readonly></div>
+      <div><label>Purchase Price *</label><input id="pur_cost" type="number" min="0.01" step="0.01"></div>
+      <div><label>MRP *</label><input id="pur_mrp" type="number" min="0.01" step="0.01"></div>
+      <div><label>Dress Code Prefix *</label><input id="pur_dress_prefix" maxlength="20" placeholder="B → BT1-001"></div>
+    </div>
     <div id="tier_result" class="tier-card" style="display:none">
 
       <div class="tier-field"><span>Vendor</span><strong id="tier_vendor"></strong></div>
@@ -313,7 +321,7 @@
 
     <div class="actions">
 
-      <button id="post_purchase_btn" class="btn primary" onclick="postPurchase()">Post Purchase & Add Stock</button>
+      <button id="post_purchase_btn" class="btn primary" onclick="postPurchase()">Save Purchase & Generate Barcodes</button>
 
       <button class="btn danger" onclick="clearPurchaseDraft()">Clear Draft</button>
 
@@ -377,6 +385,7 @@
 
 
 
+<div class="card" style="max-width:1200px;margin:20px auto"><h3>Reprint Saved Dress Barcodes</h3><label>Purchase ID (from Purchase History)</label><input id="saved_barcode_purchase" type="number" min="1"><div class="actions"><button class="btn secondary" onclick="loadStandaloneSavedBarcodes()">Load Saved Barcodes</button><button id="saved_barcode_print" class="btn primary" onclick="printLastGeneratedStickers()" disabled>Print Saved Barcodes</button></div><div id="saved_barcode_list" class="table-wrap"></div><div id="msg_savedbarcodes" class="msg"></div></div>
 <script src="purchase.js"></script>
 
 </body>

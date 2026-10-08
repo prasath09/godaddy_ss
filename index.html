@@ -405,7 +405,7 @@
       </button>
 
       <button data-target="pricetiers">
-        Price Tiers & Barcode
+        Barcode Printing
       </button>
 
       <div class="section">Inventory</div>
@@ -590,7 +590,7 @@
       <!-- PRICE TIERS -->
       <section id="pricetiers" class="panel">
 
-        <div class="card">
+        <div class="card" style="display:none">
           <h3>Create / Reuse Price Tier</h3>
 
           <div class="note">
@@ -648,7 +648,7 @@
         </div>
 
 
-        <div class="card">
+        <div class="card" style="display:none">
           <h3>Price Tier List</h3>
           <div class="note" style="margin-bottom:12px">
             Tier Code is the master code. Individual piece barcodes are created only when purchase stock is posted.
@@ -686,6 +686,7 @@
           <div id="printArea" style="display:none"></div>
         </div>
 
+        <div class="card"><h3>Reprint Saved Dress Barcodes</h3><p class="muted">Enter the Purchase ID from Purchase History to load its saved codes, including sold pieces.</p><div class="form-grid"><div><label>Purchase ID</label><input id="saved_barcode_purchase" type="number" min="1"></div></div><div class="actions"><button class="btn secondary" onclick="loadSavedDressBarcodes()">Load Saved Barcodes</button><button id="saved_barcode_print" class="btn primary" onclick="printSavedDressBarcodes()" disabled>Print Saved Barcodes</button></div><div id="saved_barcode_list" class="table-wrap"></div><div id="msg_savedbarcodes" class="msg"></div></div>
       </section>
 
 
@@ -726,7 +727,7 @@
 
           <div class="note">
             Scan or type the Tier Code (example: JT1), or manually select Vendor → Category → Price Tier.
-            Enter the inward quantity once. The system then creates a new Batch and one unique barcode for each physical piece.
+            Enter purchase price, quantity and dress prefix. Saving creates a unique dress barcode for every piece (e.g. BT1-001).
           </div>
 
           <div class="form-grid three" style="margin-top:12px">
@@ -746,7 +747,7 @@
             </div>
 
             <div>
-              <label>Price Tier *</label>
+              <label>Tier Code *</label>
               <select id="pur_tier" onchange="showSelectedPurchaseTier()"></select>
             </div>
 
@@ -782,6 +783,12 @@
 
           </div>
 
+          <div class="form-grid three" style="margin-top:12px">
+            <div><label>Purchase Price *</label><input id="pur_cost" type="number" min="0.01" step="0.01"></div>
+            <div><label>Selling Price (automatic)</label><input id="pur_selling" readonly></div>
+            <div><label>MRP *</label><input id="pur_mrp" type="number" min="0.01" step="0.01"></div>
+            <div><label>Dress Code Prefix *</label><input id="pur_dress_prefix" maxlength="20" placeholder="B for vendor → BT1-001" oninput="this.value=this.value.toUpperCase()"></div>
+          </div>
           <div id="pur_tier_info" class="note" style="margin-top:12px">
             Select a Price Tier or enter the Tier Code.
           </div>
@@ -805,7 +812,7 @@
 
           <div class="actions">
             <button class="btn primary" onclick="postPurchase()">
-              Post Purchase & Add Stock
+              Save Purchase & Generate Barcodes
             </button>
 
             <button class="btn danger" onclick="clearPurchaseDraft()">

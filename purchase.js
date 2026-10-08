@@ -15,6 +15,7 @@ window.onload = () => {
   renderPurchaseDraft();
 
   focusTierScanner();
+  loadStandalonePurchaseSetup();
 
 };
 
@@ -50,7 +51,7 @@ function normalizeTierInput(el){
 
   el.value=String(el.value||'').toUpperCase()
 
-    .replace(/[^A-Z0-9-]/g,'')
+    .replace(/[^A-Z0-9_-]/g,'')
 
     .replace(/-+/g,'-');
 
@@ -489,7 +490,7 @@ function removePurchaseLine(i){
 
   if(PURCHASE_DRAFT.length){
 
-    document.getElementById('purchase_vendor_display').value=PURCHASE_DRAFT[0].VendorName || '';
+    document.getElementById('purchase_vendor_display').value=PURCHASE_DRAFT[0].VendorID || '';
 
   }
 
@@ -539,6 +540,11 @@ function postPurchase(){
 
   const items=PURCHASE_DRAFT.map(x=>({
 
+    CategoryPriceTierID:x.CategoryPriceTierID,
+    CategoryID:x.CategoryID,
+    DressPrefix:x.DressPrefix,
+    PurchasePrice:x.PurchasePrice,
+    MRP:x.MRP,
     PriceTierID:x.PriceTierID,
 
     Qty:x.Qty,
@@ -579,7 +585,7 @@ function postPurchase(){
 
       PURCHASE_DRAFT=[];
 
-      CURRENT_TIER=null;
+      selectStandaloneTier();
 
       document.getElementById('pur_invoice').value='';
 
@@ -702,7 +708,7 @@ function printLastGeneratedStickers(){
     const div=document.createElement('div');
     div.className='barcode-label';
     const price='₹'+Number(piece.SellingPrice||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});
-    const tierCode=piece.TierCode||String(piece.PieceBarcode||'').split('-B')[0];
+    const tierCode=piece.PieceBarcode;
     div.innerHTML=`<div class="label-heading"><span>SS</span><strong>${esc(price)}</strong></div>
       <svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg>
       <div class="label-tier">${esc(tierCode)}</div>`;
@@ -801,4 +807,51 @@ function loadRecentPurchases(){
 
     .getRecentPurchasesFast(20);
 
+}
+
+let PURCHASE_SETUP={vendors:[],categories:[],categoryPriceTiers:[]};
+function setStandaloneOptions(id,rows,key,label){
+  const select=document.getElementById(id);select.replaceChildren(new Option('-- Select --',''));
+  rows.forEach(r=>select.add(new Option(r[label],r[key])));
+}
+function loadStandalonePurchaseSetup(){
+  google.script.run.withSuccessHandler(data=>{
+    PURCHASE_SETUP=data;setStandaloneOptions('purchase_vendor_display',data.vendors,'VendorID','VendorName');
+    setStandaloneOptions('pur_category',data.categories,'CategoryID','CategoryName');fillStandaloneTiers();
+  }).withFailureHandler(e=>msg('purchase',e.message||String(e),'err')).getPurchaseSetup();
+}
+function fillStandaloneTiers(){
+  const rows=(PURCHASE_SETUP.categoryPriceTiers||[]).filter(r=>String(r.CategoryID)===val('pur_category')).map(r=>({...r,Display:r.TierCode+' — '+money(r.SellingPrice)}));
+  setStandaloneOptions('pur_tier',rows,'CategoryPriceTierID','Display');selectStandaloneTier();
+}
+function selectStandaloneTier(){
+  CURRENT_TIER=(PURCHASE_SETUP.categoryPriceTiers||[]).find(r=>String(r.CategoryPriceTierID)===val('pur_tier'))||null;
+  document.getElementById('pur_selling').value=CURRENT_TIER?money(CURRENT_TIER.SellingPrice):'';
+  document.getElementById('pur_mrp').value=CURRENT_TIER?CURRENT_TIER.SellingPrice:'';
+  document.getElementById('tier_result').style.display='none';
+}
+function lookupTier(code){
+  const row=(PURCHASE_SETUP.categoryPriceTiers||[]).find(r=>r.TierCode.toUpperCase()===String(code).trim().toUpperCase());
+  if(!row)return msg('purchase_line','Tier Code not found in category masters.','err');
+  document.getElementById('pur_category').value=row.CategoryID;fillStandaloneTiers();document.getElementById('pur_tier').value=row.CategoryPriceTierID;selectStandaloneTier();
+}
+function addPurchaseLine(){
+  const t=CURRENT_TIER,vendorId=val('purchase_vendor_display');
+  const qty=Number(val('pur_qty')),cost=Number(val('pur_cost')),mrp=Number(val('pur_mrp')),prefix=val('pur_dress_prefix').trim().toUpperCase();
+  if(!vendorId||!t)return msg('purchase_line','Select Vendor, Category and Tier Code.','err');
+  if(!Number.isSafeInteger(qty)||qty<=0)return msg('purchase_line','Enter a whole quantity greater than zero.','err');
+  if(!Number.isFinite(cost)||cost<=0||!Number.isFinite(mrp)||mrp<=0)return msg('purchase_line','Enter valid purchase price and MRP.','err');
+  if(!/^[A-Z0-9]{1,20}$/.test(prefix))return msg('purchase_line','Enter a dress prefix using letters/numbers, e.g. B.','err');
+  if(PURCHASE_DRAFT.some(r=>String(r.VendorID)!==vendorId))return msg('purchase_line','Finish or clear the current vendor draft first.','err');
+  const vendor=PURCHASE_SETUP.vendors.find(v=>String(v.VendorID)===vendorId),category=PURCHASE_SETUP.categories.find(c=>String(c.CategoryID)===String(t.CategoryID));
+  PURCHASE_DRAFT.push({CategoryPriceTierID:t.CategoryPriceTierID,CategoryID:t.CategoryID,DressPrefix:prefix,VendorID:vendorId,VendorName:vendor.VendorName,CategoryName:category.CategoryName,TierName:t.TierCode,Barcode:prefix+t.TierCode,PurchasePrice:cost,SellingPrice:Number(t.SellingPrice),MRP:mrp,Qty:qty,Material:val('pur_material'),Design:val('pur_design'),Colour:val('pur_colour'),Size:val('pur_size'),Remarks:val('pur_line_remarks')});
+  renderPurchaseDraft();msg('purchase_line','Stock line added. Save Purchase to generate Dress Codes.','ok');
+}
+function loadStandaloneSavedBarcodes(){
+  document.getElementById('saved_barcode_print').disabled=true;setLastGeneratedPieces([]);
+  google.script.run.withSuccessHandler(rows=>{
+    setLastGeneratedPieces(rows||[]);document.getElementById('saved_barcode_print').disabled=!rows.length;
+    const area=document.getElementById('saved_barcode_list');area.innerHTML='<table><thead><tr><th>Dress Code</th><th>Tier</th><th>Selling Price</th><th>Status</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.PieceBarcode)+'</td><td>'+esc(r.TierCode)+'</td><td>'+money(r.SellingPrice)+'</td><td>'+esc(r.Status)+'</td></tr>').join('')+'</tbody></table>';
+    msg('savedbarcodes',rows.length+' saved barcode(s) loaded.','ok');
+  }).withFailureHandler(e=>msg('savedbarcodes',e.message||String(e),'err')).getSavedPurchaseBarcodes(Number(val('saved_barcode_purchase')));
 }

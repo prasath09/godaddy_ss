@@ -739,7 +739,7 @@ function printLastGeneratedStickers() {
   printNovajetLabels(LAST_GENERATED_PIECES.map(piece=>({
     vendor:piece.VendorName||'',
     meta:[piece.CategoryName,piece.TierCode,piece.BatchNo].filter(Boolean).join(' · '),
-    price:piece.SellingPrice,mrp:piece.MRP,barcode:piece.PieceBarcode,tierCode:piece.TierCode||String(piece.PieceBarcode||'').split('-B')[0]
+    price:piece.SellingPrice,mrp:piece.MRP,barcode:piece.PieceBarcode,tierCode:piece.PieceBarcode
   })));
 }
 
@@ -1139,7 +1139,7 @@ function renderPurchaseDraft() {
     [
       'Vendor',
       'Category',
-      'Tier Code',
+      'Tier / Dress Prefix',
       'Qty',
       'Purchase',
       'Selling',
@@ -1182,7 +1182,7 @@ function renderPurchaseDraft() {
           <tr>
             <td>${esc(x.VendorName)}</td>
             <td>${esc(x.CategoryName)}</td>
-            <td>${esc(x.TierName)}</td>
+            <td>${esc(x.TierName)}${x.DressPrefix ? ' / ' + esc(x.DressPrefix+x.TierName) : ''}</td>
             <td>${x.Qty}</td>
             <td>${money(x.PurchasePrice)}</td>
             <td>${money(x.SellingPrice)}</td>
@@ -1286,6 +1286,7 @@ function postPurchase() {
     ''
   );
 
+  if(PURCHASE_DRAFT.some(x=>x.DraftVendorID&&String(x.DraftVendorID)!==vendorId))return msg('purchase','Draft vendor differs from selected vendor.','err');
   google.script.run
     .withSuccessHandler(res => {
 
@@ -2728,6 +2729,7 @@ function saveCategoryTierRows(){
     DATA.categoryPriceTiers=(DATA.categoryPriceTiers||[]).filter(r=>String(r.CategoryID)!==CategoryID).concat(Rows.map(r=>({...r,CategoryID})));
     fillCategoryTierPresets();
     renderCategoryTierList();
+    loadAll();
   }).withFailureHandler(e=>{button.disabled=false;msg('categorytiers',e.message||String(e),'err');}).saveCategoryPriceTiers({CategoryID,Rows});
 }
 
@@ -2751,4 +2753,48 @@ function renderCategoryTierList(){
     const text=tiers.length?tiers.map(t=>esc(t.TierCode)+' — '+esc('₹'+Number(t.SellingPrice).toLocaleString('en-IN',{maximumFractionDigits:2}))).join(' · '):'No tiers added';
     return '<tr><td>'+esc(category.CategoryID)+'</td><td>'+esc(category.CategoryName)+'</td><td style="white-space:normal;line-height:1.8">'+text+'</td></tr>';
   }).join('')+'</tbody></table>';
+}
+
+function purchaseVendorChanged(){
+  setOptions('pur_category',DATA.categories||[],'CategoryID','CategoryName');
+  fillPurchasePriceTiers();
+}
+function fillPurchasePriceTiers(){
+  const rows=(DATA.categoryPriceTiers||[]).filter(r=>String(r.CategoryID)===val('pur_category')).map(r=>({...r,Display:r.TierCode+' — '+money(r.SellingPrice)}));
+  setOptions('pur_tier',rows,'CategoryPriceTierID','Display');showSelectedPurchaseTier();
+}
+function showSelectedPurchaseTier(){
+  const tier=(DATA.categoryPriceTiers||[]).find(r=>String(r.CategoryPriceTierID)===val('pur_tier'));
+  document.getElementById('pur_selling').value=tier?money(tier.SellingPrice):'';
+  document.getElementById('pur_mrp').value=tier?tier.SellingPrice:'';
+  document.getElementById('pur_tier_info').textContent=tier?'Selected '+tier.TierCode+'. Enter purchase price and dress prefix. Dress codes are saved when the purchase is posted.':'Select a category and its Tier Code.';
+}
+function purchaseBarcodeKey(e){
+  if(e.key!=='Enter')return;e.preventDefault();
+  const tier=(DATA.categoryPriceTiers||[]).find(r=>r.TierCode.toUpperCase()===val('pur_barcode').trim().toUpperCase());
+  if(!tier)return msg('purchase_line','Tier Code not found in category masters.','err');
+  document.getElementById('pur_category').value=tier.CategoryID;fillPurchasePriceTiers();document.getElementById('pur_tier').value=tier.CategoryPriceTierID;showSelectedPurchaseTier();
+}
+function addPurchaseLine(){
+  const tier=(DATA.categoryPriceTiers||[]).find(r=>String(r.CategoryPriceTierID)===val('pur_tier'));
+  const qty=Number(val('pur_qty')),cost=Number(val('pur_cost')),mrp=Number(val('pur_mrp')),prefix=val('pur_dress_prefix').trim().toUpperCase();
+  if(!val('pur_vendor'))return msg('purchase_line','Select Vendor.','err');
+  if(!tier)return msg('purchase_line','Select Category and Tier Code.','err');
+  if(!Number.isSafeInteger(qty)||qty<=0)return msg('purchase_line','Enter a whole quantity greater than zero.','err');
+  if(!Number.isFinite(cost)||cost<=0||!Number.isFinite(mrp)||mrp<=0)return msg('purchase_line','Enter valid purchase price and MRP.','err');
+  if(!/^[A-Z0-9]{1,20}$/.test(prefix))return msg('purchase_line','Enter a dress prefix using letters/numbers, e.g. B.','err');
+  const category=(DATA.categories||[]).find(c=>String(c.CategoryID)===String(tier.CategoryID));
+  const vendor=(DATA.vendors||[]).find(v=>String(v.VendorID)===val('pur_vendor'));
+  if(PURCHASE_DRAFT.length&&String(PURCHASE_DRAFT[0].DraftVendorID)!==val('pur_vendor'))return msg('purchase_line','Finish or clear the existing vendor draft before changing vendor.','err');
+  PURCHASE_DRAFT.push({CategoryPriceTierID:tier.CategoryPriceTierID,CategoryID:tier.CategoryID,PriceTierID:'category-'+tier.CategoryPriceTierID,Barcode:prefix+tier.TierCode,TierName:tier.TierCode,DressPrefix:prefix,DraftVendorID:val('pur_vendor'),VendorName:vendor?.VendorName||'',CategoryName:category?.CategoryName||'',PurchasePrice:cost,SellingPrice:Number(tier.SellingPrice),MRP:mrp,Qty:qty,Material:val('pur_material'),Design:val('pur_design'),Colour:val('pur_colour'),Size:val('pur_size'),Remarks:val('pur_line_remarks')});
+  renderPurchaseDraft();msg('purchase_line','Stock line added. Codes will be generated when you save the purchase.','ok');
+}
+let SAVED_DRESS_BARCODES=[];
+function loadSavedDressBarcodes(){
+  document.getElementById('saved_barcode_print').disabled=true;SAVED_DRESS_BARCODES=[];
+  google.script.run.withSuccessHandler(rows=>{SAVED_DRESS_BARCODES=rows||[];renderTable('saved_barcode_list',SAVED_DRESS_BARCODES,['PieceBarcode','TierCode','SellingPrice','Status']);document.getElementById('saved_barcode_print').disabled=!rows.length;msg('savedbarcodes',rows.length+' saved barcode(s) loaded.','ok');}).withFailureHandler(e=>msg('savedbarcodes',e.message||String(e),'err')).getSavedPurchaseBarcodes(Number(val('saved_barcode_purchase')));
+}
+function printSavedDressBarcodes(){
+  if(!SAVED_DRESS_BARCODES.length)return;
+  printNovajetLabels(SAVED_DRESS_BARCODES.map(piece=>({price:piece.SellingPrice,barcode:piece.PieceBarcode,tierCode:piece.PieceBarcode})));
 }

@@ -1,12 +1,6 @@
-let IMPORT_ROWS = [];
-let GENERATED_PIECES = [];
-let VENDOR_FROM_EXCEL = false;
-let PURCHASE_SAVED = false;
-let SAVING = false;
-let ROW_PIECES = [];
-
-window.onload = () => setToday();
-
+let IMPORT_ROWS=[],GENERATED_PIECES=[],SAVED_PIECES=[],PURCHASE_SAVED=false,SAVING=false,VENDOR_FROM_EXCEL=false;
+let SETUP={vendors:[],categories:[],categoryPriceTiers:[]},SETUP_READY=false;
+window.onload=async()=>{setToday();document.getElementById('excel_file').disabled=true;try{SETUP=await callGas('getPurchaseSetup');SETUP_READY=true;for(const id of ['vendor_name','reprint_vendor'])document.getElementById(id).innerHTML=options(SETUP.vendors,'VendorID','VendorName','');document.getElementById('excel_file').disabled=false;renderTable();}catch(e){msg('upload','Unable to load masters: '+e.message,'err');}};
 function clean(v){ return String(v ?? "").trim(); }
 function upper(v){ return clean(v).toUpperCase(); }
 function esc(v){ return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c])); }
@@ -26,8 +20,11 @@ function getField(obj,names){
   return "";
 }
 
+
+function callGas(method,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[method](...args));}
+function options(rows,key,label,selected){return '<option value="">-- Select --</option>'+rows.map(r=>'<option value="'+escAttr(r[key])+'" '+(String(r[key])===String(selected)?'selected':'')+'>'+esc(r[label])+'</option>').join('');}
 async function handleFileUpload(event){
-  if(SAVING || PURCHASE_SAVED)return;
+  if(!SETUP_READY || SAVING || PURCHASE_SAVED)return;
   const file=event.target.files?.[0]; if(!file)return;
   try{
     msg("upload","Reading Excel file...");
@@ -61,6 +58,7 @@ function loadWorkbook(wb){
   IMPORT_ROWS=rows.map((r,index)=>{
     return {
       RowNo:index+1,
+      DressPrefix:upper(getField(r,["Dress Prefix","Vendor Prefix","Prefix"])),
       Particulars:clean(getField(r,["Particulars","Description","Item","Product"])),
       Qty:Number(getField(r,["Qty","Quantity","Pcs","No of Pcs"])||0),
       PurchasePrice:Number(getField(r,["Purchase Price","Purchase Rate","Rate","Cost"])||0),
@@ -78,77 +76,23 @@ function loadWorkbook(wb){
 
   GENERATED_PIECES=[];
   
-  setTopVendorFromExcel(excelVendorName); renderTable(); validateReady();
+  setTopVendorFromExcel(excelVendorName); IMPORT_ROWS.forEach(resolveExcelTier); renderTable(); validateReady();
 }
 
-function setTopVendorFromExcel(excelVendorName){
-  const el=document.getElementById("vendor_name");
-  el.value=excelVendorName||"";
-  el.readOnly=!!excelVendorName;
-  el.title=excelVendorName
-    ? "Vendor Name loaded from Excel"
-    : "Vendor Name not found in Excel. Enter it here.";
-}
 
-function vendorNameChanged(){
-  validateReady();
-}
-function addBlankRow(){
-  if(SAVING || PURCHASE_SAVED)return;
-  IMPORT_ROWS.push({RowNo:IMPORT_ROWS.length+1,Particulars:"",Qty:1,PurchasePrice:0,Code:"",SellingPrice:0,MRP:0,Category:"",Material:"",Design:"",Colour:"",Size:"",Remarks:""});
-  renderTable(); validateReady();
-}
-
-function updateRow(i,field,value){
-  if(SAVING || PURCHASE_SAVED)return;
-  const r=IMPORT_ROWS[i]; if(!r)return;
-  if(["Qty","PurchasePrice","SellingPrice","MRP"].includes(field)) r[field]=Number(value||0); else { r[field]=clean(value); if(field==="Code") r[field]=upper(r[field]).replace(/[^A-Z0-9-]/g,""); }
-  renderTotals(); validateReady(); refreshMasterButton(i);
-}
-
-function removeRow(i){ if(SAVING || PURCHASE_SAVED)return; IMPORT_ROWS.splice(i,1); IMPORT_ROWS.forEach((r,n)=>r.RowNo=n+1); renderTable(); validateReady(); }
-
-function applyCodeToAll(){
-  if(SAVING || PURCHASE_SAVED)return;
-  const code=upper(document.getElementById("apply_code").value).replace(/[^A-Z0-9-]/g,"");
-  if(!code) return msg("review","Enter a valid Tier Code first. Example: JT1.","err");
-  IMPORT_ROWS.forEach(r=>r.Code=code);
-  renderTable(); validateReady();
-  msg("review",`Tier Code ${code} applied to all rows.`,"ok");
-}
-
-function applySellingToAll(){
-  if(SAVING || PURCHASE_SAVED)return;
-  const price=Number(document.getElementById("apply_selling").value||0);
-  if(!Number.isFinite(price)||price<=0) return msg("review","Enter a valid selling price first.","err");
-  IMPORT_ROWS.forEach(r=>r.SellingPrice=price); renderTable(); validateReady(); msg("review",`Selling price ${money(price)} applied to all rows.`,"ok");
-}
-
-function renderTable(){
-  if(PURCHASE_SAVED){renderSavedTable(); return;}
-  const el=document.getElementById("import_table");
-  if(!IMPORT_ROWS.length){ el.innerHTML='<div class="muted" style="padding:12px">No imported rows.</div>'; renderTotals(); return; }
-  el.innerHTML=`<table><thead><tr><th>#</th><th>Particulars</th><th>Qty</th><th>Purchase</th><th>Tier Code *</th><th>Selling *</th><th>MRP</th><th>Category</th><th>Material</th><th>Design</th><th>Colour</th><th>Size</th><th>Remarks</th><th>Tier / Master Barcode</th><th></th></tr></thead><tbody>${IMPORT_ROWS.map((r,i)=>`
-    <tr>
-      <td>${i+1}</td>
-      <td><input class="wide" value="${escAttr(r.Particulars)}" onchange="updateRow(${i},'Particulars',this.value)"></td>
-      <td><input class="small" type="number" min="1" step="1" value="${r.Qty||""}" onchange="updateRow(${i},'Qty',this.value)"></td>
-      <td><input class="small" type="number" min="0" step=".01" value="${r.PurchasePrice||""}" onchange="updateRow(${i},'PurchasePrice',this.value)"></td>
-      <td><input class="small required" type="text" maxlength="20" value="${escAttr(r.Code||"")}" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'');updateRow(${i},'Code',this.value)"></td>
-      <td><input class="small required" type="number" min="0" step=".01" value="${r.SellingPrice||""}" oninput="updateRow(${i},'SellingPrice',this.value)"></td>
-      <td><input class="small" type="number" min="0" step=".01" value="${r.MRP||""}" onchange="updateRow(${i},'MRP',this.value)"></td>
-      <td><input class="mid" value="${escAttr(r.Category)}" onchange="updateRow(${i},'Category',this.value)"></td>
-      <td><input class="mid" value="${escAttr(r.Material)}" onchange="updateRow(${i},'Material',this.value)"></td>
-      <td><input class="mid" value="${escAttr(r.Design)}" onchange="updateRow(${i},'Design',this.value)"></td>
-      <td><input class="mid" value="${escAttr(r.Colour)}" onchange="updateRow(${i},'Colour',this.value)"></td>
-      <td><input class="small" value="${escAttr(r.Size)}" onchange="updateRow(${i},'Size',this.value)"></td>
-      <td><input class="mid" value="${escAttr(r.Remarks)}" onchange="updateRow(${i},'Remarks',this.value)"></td>
-      <td id="master_action_${i}">${masterButtonHtml(r,i)}</td>
-      <td><button class="btn danger" style="padding:5px 8px" onclick="removeRow(${i})">×</button></td>
-    </tr>`).join("")}</tbody></table>`;
-  renderTotals();
-}
-
+function setTopVendorFromExcel(name){if(!name)return;const v=SETUP.vendors.find(v=>upper(v.VendorName)===upper(name));document.getElementById('vendor_name').value=v?v.VendorID:'';if(!v)msg('review','Excel vendor not found. Select an existing vendor or create it in Masters.','warn');}
+function resolveExcelTier(r){const c=SETUP.categories.find(c=>upper(c.CategoryName)===upper(r.Category));const t=SETUP.categoryPriceTiers.find(t=>upper(t.TierCode)===upper(r.Code)&&(!c||String(t.CategoryID)===String(c.CategoryID)));r.CategoryID=c?.CategoryID||t?.CategoryID||'';r.CategoryPriceTierID=t?.CategoryPriceTierID||'';syncTier(r);}
+function syncTier(r){const t=SETUP.categoryPriceTiers.find(t=>String(t.CategoryPriceTierID)===String(r.CategoryPriceTierID)&&String(t.CategoryID)===String(r.CategoryID));r.Code=t?.TierCode||'';r.SellingPrice=Number(t?.SellingPrice||0);r.Category=SETUP.categories.find(c=>String(c.CategoryID)===String(r.CategoryID))?.CategoryName||'';if(!r.MRP&&t)r.MRP=r.SellingPrice;}
+function vendorNameChanged(){validateReady();}
+function addBlankRow(){if(!SETUP_READY||SAVING||PURCHASE_SAVED)return;IMPORT_ROWS.push({Qty:1,PurchasePrice:0,MRP:0,CategoryID:'',CategoryPriceTierID:'',DressPrefix:'',Particulars:'',Material:'',Design:'',Colour:'',Size:'',Remarks:''});renderTable();validateReady();}
+function updateRow(i,f,v){if(SAVING||PURCHASE_SAVED)return;const r=IMPORT_ROWS[i];if(!r)return;r[f]=['Qty','PurchasePrice','MRP'].includes(f)?Number(v):clean(v);if(f==='DressPrefix')r[f]=upper(v);if(f==='CategoryID'){r.CategoryPriceTierID='';syncTier(r);renderTable();}if(f==='CategoryPriceTierID'){r.MRP=0;syncTier(r);renderTable();}renderTotals();validateReady();}
+function removeRow(i){if(SAVING||PURCHASE_SAVED)return;IMPORT_ROWS.splice(i,1);renderTable();validateReady();}
+function renderTable(){const fields=['Particulars','DressPrefix','PurchasePrice','MRP','Material','Design','Colour','Size','Qty','Remarks'];
+const headings=['Particulars','Dress Prefix','Purchase Price','MRP','Material','Design','Colour','Size','Qty','Remarks'];
+if(!IMPORT_ROWS.length){document.getElementById('import_table').innerHTML='<div class="muted" style="padding:12px">Upload Excel or click Add Row.</div>';renderTotals();return;}
+document.getElementById('import_table').innerHTML='<table><thead><tr><th>#</th><th>Category</th><th>Tier Code</th><th>Selling Price</th>'+headings.map(h=>'<th>'+h+'</th>').join('')+'<th></th></tr></thead><tbody>'+IMPORT_ROWS.map((r,i)=>{
+const tiers=SETUP.categoryPriceTiers.filter(t=>String(t.CategoryID)===String(r.CategoryID)).map(t=>({...t,Display:t.TierCode+' — '+money(t.SellingPrice)}));
+return '<tr><td>'+(i+1)+'</td><td>'+(PURCHASE_SAVED?esc(r.Category):'<select onchange="updateRow('+i+',&quot;CategoryID&quot;,this.value)">'+options(SETUP.categories,'CategoryID','CategoryName',r.CategoryID)+'</select>')+'</td><td>'+(PURCHASE_SAVED?esc(r.Code):'<select onchange="updateRow('+i+',&quot;CategoryPriceTierID&quot;,this.value)">'+options(tiers,'CategoryPriceTierID','Display',r.CategoryPriceTierID)+'</select>')+'</td><td><strong>'+money(r.SellingPrice)+'</strong></td>'+fields.map(f=>'<td>'+(PURCHASE_SAVED?esc(['PurchasePrice','MRP'].includes(f)?money(r[f]):r[f]):'<input '+(['PurchasePrice','MRP','Qty'].includes(f)?'type="number" min="0" step="'+(f==='Qty'?'1':'.01')+'"':'type="text"')+' value="'+escAttr(r[f]??'')+'" onchange="updateRow('+i+',&quot;'+f+'&quot;,this.value)">')+'</td>').join('')+'<td>'+(PURCHASE_SAVED?'Saved':'<button class="btn danger" onclick="removeRow('+i+')">×</button>')+'</td></tr>';}).join('')+'</tbody></table>';renderTotals();}
 function renderTotals(){
   const qty=IMPORT_ROWS.reduce((s,r)=>s+Number(r.Qty||0),0);
   const purchase=IMPORT_ROWS.reduce((s,r)=>s+Number(r.Qty||0)*Number(r.PurchasePrice||0),0);
@@ -156,48 +100,21 @@ function renderTotals(){
   document.getElementById("import_totals").innerHTML=`<div>Lines: <strong>${IMPORT_ROWS.length}</strong></div><div>Total Qty: <strong>${qty}</strong></div><div>Purchase Value: <strong>${money(purchase)}</strong></div><div>Selling Value: <strong>${money(retail)}</strong></div>`;
 }
 
-function validateReady(){
-  if(SAVING || PURCHASE_SAVED){document.getElementById("generate_btn").disabled=true; return false;}
-  let error="";
-  if(!IMPORT_ROWS.length) error="Upload purchase items first.";
-  const vendorName=clean(document.getElementById("vendor_name").value);
-  if(!error&&!vendorName) error="Enter Vendor Name at the top.";
-  if(!error&&IMPORT_ROWS.some(r=>!Number.isInteger(Number(r.Qty))||Number(r.Qty)<=0)) error="Every row needs a valid whole-number Qty.";
-  if(!error&&IMPORT_ROWS.some(r=>!Number.isFinite(Number(r.PurchasePrice))||Number(r.PurchasePrice)<=0)) error="Every row needs Purchase Price.";
-  if(!error&&IMPORT_ROWS.some(r=>!clean(r.Code))) error="Enter Tier Code for every row.";
-  if(!error&&IMPORT_ROWS.some(r=>!/^[A-Z0-9-]+$/.test(upper(r.Code)))) error="Tier Code can contain only A-Z, 0-9 and hyphen.";
-  if(!error&&IMPORT_ROWS.some(r=>!Number.isFinite(Number(r.SellingPrice))||Number(r.SellingPrice)<=0)) error="Enter Selling Price for every row.";
-  if(!error&&IMPORT_ROWS.some(r=>!Number.isFinite(Number(r.MRP))||Number(r.MRP)<0)) error="MRP must be zero or a valid positive amount.";
-  if(!error&&IMPORT_ROWS.some(r=>Number(r.MRP||0)>0&&Number(r.SellingPrice)>Number(r.MRP))) error="Selling Price cannot be greater than MRP.";
-  document.getElementById("generate_btn").disabled=!!error;
-  if(error){ msg("review",error,"warn"); return false; }
-  msg("review","Ready. Click Add Purchase.","ok"); return true;
-}
 
-function callGas(method,...args){ return new Promise((resolve,reject)=>{ google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[method](...args); }); }
-
-async function addPurchase(){
-  if(!validateReady())return;
-  const btn=document.getElementById("generate_btn"); btn.disabled=true;
-  SAVING=true; setFormLocked(true);
-  try{
-    msg("generate","Adding purchase to the database...");
-    const res=await callGas("createImportedPurchase",{
-      InvoiceNo:clean(document.getElementById("invoice_no").value),
-      InvoiceDate:clean(document.getElementById("invoice_date").value),
-      Remarks:clean(document.getElementById("purchase_remarks").value),
-      Items:IMPORT_ROWS.map(r=>({VendorName:clean(document.getElementById("vendor_name").value),Particulars:r.Particulars,Code:r.Code,Qty:Number(r.Qty),PurchasePrice:Number(r.PurchasePrice),SellingPrice:Number(r.SellingPrice),MRP:Number(r.MRP||0),Category:r.Category,Material:r.Material,Design:r.Design,Colour:r.Colour,Size:r.Size,Remarks:r.Remarks}))
-    });
-    if(res?.ok===false || res?.success===false || res?.error) throw new Error(res.message||res.error||"Purchase was not saved.");
-    PURCHASE_SAVED=true; SAVING=false;
-    GENERATED_PIECES=Array.isArray(res?.generatedPieces)?res.generatedPieces:[];
-    msg("generate",res?.message||"Purchase added successfully. Use Generate Barcode on the required row.","ok");
-    document.getElementById("generated_summary").innerHTML=`<strong>Purchase ID:</strong> ${esc(res?.purchaseId||"")} &nbsp; <strong>Invoice:</strong> ${esc(res?.invoiceNo||"")}<br><strong>Total Qty:</strong> ${Number(res?.totalQty||0)} &nbsp; <strong>Purchase Value:</strong> ${money(res?.purchaseValue||0)}<br><strong>Individual Barcodes:</strong> ${GENERATED_PIECES.length}`;
-    ROW_PIECES=groupSavedPieces(); renderTable();
-    msg("review","Purchase saved. Items are now read-only.","ok");
-  }catch(e){ console.error(e); msg("generate",e.message||String(e),"err"); SAVING=false; if(!PURCHASE_SAVED){setFormLocked(false);validateReady();} else {renderTable();} }
-}
-
+function validateReady(){let error='';if(!SETUP_READY)error='Masters are still loading.';else if(!IMPORT_ROWS.length)error='Upload Excel or add a stock row.';else if(!document.getElementById('vendor_name').value)error='Select Vendor.';else if(!document.getElementById('invoice_date').value)error='Select Invoice Date.';else for(const r of IMPORT_ROWS){syncTier(r);if(!r.CategoryPriceTierID||!r.Code||r.SellingPrice<=0){error='Select Category and Tier Code for every row.';break;}if(!/^[A-Z0-9]{1,20}$/.test(upper(r.DressPrefix))){error='Enter Dress Prefix for every row, e.g. B.';break;}if(!Number.isSafeInteger(r.Qty)||r.Qty<=0){error='Quantity must be a positive whole number.';break;}if(!Number.isFinite(r.PurchasePrice)||r.PurchasePrice<=0){error='Enter positive Purchase Price.';break;}if(!Number.isFinite(r.MRP)||r.MRP<r.SellingPrice){error='MRP must be at least Selling Price.';break;}}
+document.getElementById('generate_btn').disabled=!!error||SAVING||PURCHASE_SAVED;if(!PURCHASE_SAVED)msg('review',error||'Ready to save purchase.',error?'warn':'ok');return !error&&!SAVING&&!PURCHASE_SAVED;}
+function setFormLocked(locked){document.querySelectorAll('#excel_file,#vendor_name,#invoice_no,#invoice_date,#purchase_remarks,#review_actions button,#import_table input,#import_table select,#import_table button').forEach(el=>el.disabled=locked);}
+async function addPurchase(){if(!validateReady())return;SAVING=true;setFormLocked(true);document.getElementById('generate_btn').disabled=true;try{
+const vendorId=Number(document.getElementById('vendor_name').value),invoice=document.getElementById('invoice_no').value.trim()||'IMP-'+Date.now();
+const res=await callGas('createPurchase',{VendorID:vendorId,InvoiceNo:invoice,InvoiceDate:document.getElementById('invoice_date').value,Remarks:document.getElementById('purchase_remarks').value,Items:IMPORT_ROWS.map(r=>({CategoryID:r.CategoryID,CategoryPriceTierID:r.CategoryPriceTierID,DressPrefix:upper(r.DressPrefix),Qty:r.Qty,PurchasePrice:r.PurchasePrice,MRP:r.MRP,Material:r.Material,Design:r.Design,Colour:r.Colour,Size:r.Size,Remarks:[r.Particulars,r.Remarks].filter(Boolean).join(' | ')}))});
+if(res?.error||res?.ok===false||res?.success===false)throw Error(res.message||res.error||'Purchase failed.');
+PURCHASE_SAVED=true;SAVING=false;GENERATED_PIECES=res.generatedPieces||[];renderTable();document.getElementById('invoice_no').value=invoice;document.getElementById('reprint_vendor').value=vendorId;document.getElementById('reprint_invoice').value=invoice;showSavedPieces(GENERATED_PIECES);document.getElementById('generated_summary').textContent='Purchase ID: '+res.purchaseId+' | Invoice: '+invoice+' | Saved Dress Codes: '+GENERATED_PIECES.length;msg('generate','Purchase saved. Items are read-only. Print from Saved Barcodes below.','ok');msg('review','Purchase saved.','ok');
+}catch(e){SAVING=false;setFormLocked(false);validateReady();msg('generate',e.message||String(e),'err');}}
+function clearImport(){if(SAVING)return;PURCHASE_SAVED=false;IMPORT_ROWS=[];GENERATED_PIECES=[];setFormLocked(false);for(const id of ['excel_file','vendor_name','invoice_no','purchase_remarks'])document.getElementById(id).value='';document.getElementById('generated_summary').textContent='No purchase added yet.';setToday();renderTable();validateReady();msg('generate','');}
+async function loadInvoiceBarcodes(){const vendorId=Number(document.getElementById('reprint_vendor').value),invoice=document.getElementById('reprint_invoice').value.trim();if(!vendorId||!invoice)return msg('reprint','Select Vendor and enter Invoice No.','err');showSavedPieces([]);document.getElementById('load_saved_btn').disabled=true;try{const res=await callGas('getPurchaseBarcodesByInvoice',vendorId,invoice);showSavedPieces(res.pieces||[]);msg('reprint','Purchase ID: '+res.purchaseId+' | '+SAVED_PIECES.length+' saved barcode(s) loaded.','ok');}catch(e){msg('reprint',e.message||String(e),'err');}finally{document.getElementById('load_saved_btn').disabled=false;}}
+function showSavedPieces(pieces){SAVED_PIECES=pieces;document.getElementById('print_saved_btn').disabled=!pieces.length;document.getElementById('saved_barcode_list').innerHTML=pieces.length?'<table style="min-width:650px"><thead><tr><th><input type="checkbox" checked onchange="selectAllSaved(this.checked)"></th><th>Dress Code</th><th>Category</th><th>Tier</th><th>Selling Price</th><th>Status</th></tr></thead><tbody>'+pieces.map((p,i)=>'<tr><td><input class="saved-check" type="checkbox" checked data-index="'+i+'"></td><td>'+esc(p.PieceBarcode)+'</td><td>'+esc(p.CategoryName)+'</td><td>'+esc(p.TierCode)+'</td><td>'+money(p.SellingPrice)+'</td><td>'+esc(p.Status)+'</td></tr>').join('')+'</tbody></table>':'';}
+function selectAllSaved(checked){document.querySelectorAll('.saved-check').forEach(el=>el.checked=checked);}
+function printSelectedBarcodes(){const pieces=[...document.querySelectorAll('.saved-check:checked')].map(el=>SAVED_PIECES[Number(el.dataset.index)]);if(!pieces.length)return msg('reprint','Select at least one sticker.','warn');printGeneratedStickers(pieces);}
 function printGeneratedStickers(pieces){
   if(!Array.isArray(pieces)||!pieces.length)return alert("No saved piece barcodes for this row.");
   if(typeof JsBarcode!=="function")return alert("Barcode library has not loaded. Check your internet connection and retry.");
@@ -210,7 +127,7 @@ function printGeneratedStickers(pieces){
     }
     const div=document.createElement("div"); div.className="barcode-label";
     const price='₹'+Number(piece.SellingPrice||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});
-    const tierCode=piece.TierCode||String(piece.PieceBarcode||'').split('-B')[0];
+    const tierCode=piece.PieceBarcode;
     div.innerHTML=`<div class="label-heading"><span>SS</span><strong>${esc(price)}</strong></div>
       <svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg>
       <div class="label-tier">${esc(tierCode)}</div>`;
@@ -234,77 +151,5 @@ function printGeneratedStickers(pieces){
   requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
 }
 
-function clearImport(){
-  if(SAVING)return;
-  PURCHASE_SAVED=false; ROW_PIECES=[]; VENDOR_FROM_EXCEL=false; setFormLocked(false);
-  IMPORT_ROWS=[]; GENERATED_PIECES=[];
-  document.getElementById("excel_file").value=""; document.getElementById("vendor_name").value=""; document.getElementById("invoice_no").value=""; document.getElementById("purchase_remarks").value=""; document.getElementById("apply_code").value=""; document.getElementById("apply_selling").value="";
-  document.getElementById("generate_btn").disabled=true;  document.getElementById("generated_summary").textContent="No purchase added yet.";
-  msg("upload",""); msg("review",""); msg("generate",""); setToday(); renderTable();
-}
 
-function setFormLocked(locked){
-  document.querySelectorAll('#excel_file, .form-grid input, #review_actions input, #review_actions button, #import_table input, #import_table button').forEach(el=>el.disabled=locked);
-  document.getElementById('review_actions').hidden=locked;
-  document.getElementById('vendor_name').readOnly=locked||VENDOR_FROM_EXCEL;
-}
-
-function groupSavedPieces(){
-  // Never guess row ownership from tier code: different rows may share a tier.
-  // Legacy createImportedPurchase returns pieces in input-row order.
-  const all=GENERATED_PIECES;
-  if(all.length!==IMPORT_ROWS.reduce((n,r)=>n+r.Qty,0) ||
-     all.some(p=>!clean(p.PieceBarcode)) ||
-     new Set(all.map(p=>p.PieceBarcode)).size!==all.length)return [];
-  let offset=0;
-  return IMPORT_ROWS.map(r=>{
-    const pieces=all.slice(offset,offset+r.Qty); offset+=r.Qty;
-    // Reject a mismatched legacy response rather than print another row's labels.
-    return pieces.every(p=>upper(p.TierCode)===r.Code &&
-      clean(p.Particulars)===r.Particulars && Number(p.SellingPrice)===r.SellingPrice)
-      ? pieces : [];
-  });
-}
-
-function renderSavedTable(){
-  const fields=['Particulars','Qty','PurchasePrice','Code','SellingPrice','MRP','Category','Material','Design','Colour','Size','Remarks'];
-  const headings=['Particulars','Qty','Purchase','Tier Code','Selling','MRP','Category','Material','Design','Colour','Size','Remarks'];
-  document.getElementById('import_table').innerHTML='<table><thead><tr><th>#</th>'+headings.map(h=>'<th>'+h+'</th>').join('')+'<th>Barcode</th></tr></thead><tbody>'+IMPORT_ROWS.map((r,i)=>'<tr><td>'+(i+1)+'</td>'+fields.map(f=>'<td>'+esc(['PurchasePrice','SellingPrice','MRP'].includes(f)?money(f==='MRP'?(r.MRP||r.SellingPrice):r[f]):f==='Category'?(r[f]||'GENERAL'):r[f])+'</td>').join('')+'<td><button class="btn secondary" onclick="printRowBarcodes('+i+')" '+(ROW_PIECES[i]?.length===r.Qty?'':'disabled')+'>Print Piece Barcodes ('+r.Qty+')</button></td></tr>').join('')+'</tbody></table>';
-  renderTotals();
-  if(IMPORT_ROWS.some((r,i)=>ROW_PIECES[i]?.length!==r.Qty))msg('generate','Purchase saved, but barcode row ownership could not be verified. Do not add this purchase again. The backend must return generatedPieces in input-row order with Particulars, TierCode and SellingPrice.', 'warn');
-}
-
-function printRowBarcodes(index){
-  if(!PURCHASE_SAVED || ROW_PIECES[index]?.length!==IMPORT_ROWS[index]?.Qty)return;
-  printGeneratedStickers(ROW_PIECES[index]);
-}
 window.addEventListener('afterprint',()=>{document.getElementById('printArea').innerHTML='';});
-
-function masterRowReady(row){
-  return !!row && /^[A-Z0-9-]+$/.test(row.Code) &&
-    Number.isFinite(Number(row.SellingPrice)) && Number(row.SellingPrice)>0;
-}
-function masterButtonHtml(row,index){
-  return masterRowReady(row)
-    ? `<button class="btn secondary" onclick="printMasterBarcode(${index})">Generate Barcode</button>`
-    : '<span class="muted">Enter Tier Code &amp; Selling Price</span>';
-}
-function refreshMasterButton(index){
-  const cell=document.getElementById('master_action_'+index);
-  if(cell)cell.innerHTML=masterButtonHtml(IMPORT_ROWS[index],index);
-}
-function printMasterBarcode(index){
-  const row=IMPORT_ROWS[index];
-  if(SAVING || !masterRowReady(row))return;
-  const mrp=Number(row.MRP)||Number(row.SellingPrice);
-  if(!Number.isFinite(mrp)||mrp<row.SellingPrice){alert('MRP must be at least the Selling Price.');return;}
-  const qty=Number.isInteger(row.Qty)&&row.Qty>0?row.Qty:1;
-  // Master labels all encode the tier code only, without batch/serial.
-  printGeneratedStickers(Array.from({length:qty},()=>({
-    PieceBarcode:row.Code,
-    CategoryName:row.Category||'GENERAL',
-    Particulars:row.Particulars,
-    SellingPrice:Number(row.SellingPrice),
-    MRP:mrp
-  })));
-}
