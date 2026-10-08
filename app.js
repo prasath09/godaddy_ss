@@ -289,6 +289,7 @@ function loadAll() {
 
       fillDropdowns();
       renderAll();
+      fillCategoryTierEditor();
       renderPurchaseDraft();
       renderPurchaseHistory();
       renderStock();
@@ -528,6 +529,7 @@ function fillPriceTierCategories() {
     'CategoryID',
     'CategoryName'
   );
+  fillCategoryTierPresets();
 }
 
 function savePriceTier() {
@@ -2699,4 +2701,51 @@ function renderPriceTierList() {
       </tbody>
     </table>
   `;
+}
+
+// Category-level selling-price presets, independent of vendor purchase tiers.
+function fillCategoryTierEditor(){
+  const select=document.getElementById('cpt_category'),old=select.value;
+  select.replaceChildren(new Option('Select Category',''));
+  (DATA.categories||[]).forEach(c=>select.add(new Option(c.CategoryName,c.CategoryID)));
+  if([...select.options].some(o=>o.value===old))select.value=old;
+  showCategoryTierRows();
+  fillCategoryTierPresets();
+}
+function addCategoryTierRow(code='',price=''){
+  const row=document.createElement('div');row.className='form-grid';row.style.margin='10px 0';
+  row.innerHTML='<div><label>Tier Code *</label><input class="cpt_code" placeholder="T1" maxlength="50"></div><div><label>Selling Price *</label><input class="cpt_price" type="number" min="0.01" step="0.01" placeholder="249"></div><div><label>&nbsp;</label><button type="button" class="btn secondary">Remove Row</button></div>';
+  row.querySelector('.cpt_code').value=code;row.querySelector('.cpt_price').value=price;
+  row.querySelector('button').onclick=()=>row.remove();document.getElementById('cpt_rows').appendChild(row);
+}
+function showCategoryTierRows(){
+  document.getElementById('cpt_rows').replaceChildren();msg('categorytiers','');
+  const rows=(DATA.categoryPriceTiers||[]).filter(r=>String(r.CategoryID)===val('cpt_category'));
+  if(rows.length)rows.forEach(r=>addCategoryTierRow(r.TierCode,r.SellingPrice));else for(let i=0;i<3;i++)addCategoryTierRow();
+}
+function saveCategoryTierRows(){
+  const CategoryID=val('cpt_category');
+  const Rows=[...document.querySelectorAll('#cpt_rows > div')].map(row=>({TierCode:row.querySelector('.cpt_code').value.trim().toUpperCase(),SellingPrice:row.querySelector('.cpt_price').value}));
+  if(!CategoryID)return msg('categorytiers','Select a category.','err');
+  if(!Rows.length||Rows.some(r=>!r.TierCode||!r.SellingPrice||Number(r.SellingPrice)<=0))return msg('categorytiers','Complete the code and selling price in every row.','err');
+  if(new Set(Rows.map(r=>r.TierCode)).size!==Rows.length)return msg('categorytiers','Use a different code for each row.','err');
+  const button=document.getElementById('cpt_save');button.disabled=true;
+  google.script.run.withSuccessHandler(res=>{
+    button.disabled=false;msg('categorytiers',res.message,'ok');
+    DATA.categoryPriceTiers=(DATA.categoryPriceTiers||[]).filter(r=>String(r.CategoryID)!==CategoryID).concat(Rows.map(r=>({...r,CategoryID})));
+    fillCategoryTierPresets();
+  }).withFailureHandler(e=>{button.disabled=false;msg('categorytiers',e.message||String(e),'err');}).saveCategoryPriceTiers({CategoryID,Rows});
+}
+
+function fillCategoryTierPresets(){
+  const select=document.getElementById('pt_preset');
+  select.replaceChildren(new Option('Select saved category tier',''));
+  (DATA.categoryPriceTiers||[]).filter(r=>String(r.CategoryID)===val('pt_category')).forEach(r=>select.add(new Option(r.TierCode+' · '+money(r.SellingPrice),r.TierCode)));
+}
+function applyCategoryTierPreset(){
+  const row=(DATA.categoryPriceTiers||[]).find(r=>String(r.CategoryID)===val('pt_category')&&r.TierCode===val('pt_preset'));
+  if(!row)return;
+  document.getElementById('pt_name').value=row.TierCode;
+  document.getElementById('pt_selling').value=row.SellingPrice;
+  document.getElementById('pt_mrp').value=row.SellingPrice;
 }

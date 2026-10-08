@@ -502,6 +502,15 @@
         </div>
 
         <div class="card">
+          <h3>Category Price Tiers</h3>
+          <div class="form-grid"><div><label>Category *</label><select id="cpt_category" onchange="showCategoryTierRows()"></select></div></div>
+          <p class="muted">Enter each Tier Code and its Selling Price. Example: T1 ₹249, T2 ₹349, T3 ₹499.</p>
+          <div id="cpt_rows"></div>
+          <div class="actions"><button class="btn secondary" onclick="addCategoryTierRow()">Add Row</button><button id="cpt_save" class="btn primary" onclick="saveCategoryTierRows()">Save Price Tiers</button></div>
+          <div id="msg_categorytiers" class="msg"></div>
+        </div>
+
+        <div class="card">
           <h3>Category List</h3>
           <div id="list_categories" class="table-wrap"></div>
         </div>
@@ -598,7 +607,9 @@
 
             <div>
               <label>Category *</label>
-              <select id="pt_category"></select>
+              <select id="pt_category" onchange="fillCategoryTierPresets()"></select>
+            </div>
+            <div><label>Saved Category Price Tier</label><select id="pt_preset" onchange="applyCategoryTierPreset()"></select>
             </div>
 
             <div>
