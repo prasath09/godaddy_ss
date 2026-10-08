@@ -661,7 +661,7 @@ function printStickers() {
   printNovajetLabels(Array.from({length:qty},()=>({
     vendor:tier.VendorName||'',
     meta:[tier.CategoryName,tier.TierName].filter(Boolean).join(' · '),
-    price:tier.SellingPrice,mrp:tier.MRP,barcode:barcode
+    price:tier.SellingPrice,mrp:tier.MRP,barcode:barcode,tierCode:tier.TierCode||tier.TierName||barcode
   })));
 }
 
@@ -737,7 +737,7 @@ function printLastGeneratedStickers() {
   printNovajetLabels(LAST_GENERATED_PIECES.map(piece=>({
     vendor:piece.VendorName||'',
     meta:[piece.CategoryName,piece.TierCode,piece.BatchNo].filter(Boolean).join(' · '),
-    price:piece.SellingPrice,mrp:piece.MRP,barcode:piece.PieceBarcode
+    price:piece.SellingPrice,mrp:piece.MRP,barcode:piece.PieceBarcode,tierCode:piece.TierCode||String(piece.PieceBarcode||'').split('-B')[0]
   })));
 }
 
@@ -756,17 +756,16 @@ function printNovajetLabels(labels){
       area.appendChild(sheet);
     }
     const div=document.createElement('div');div.className='barcode-label';
-    div.innerHTML=`<div class="label-vendor">${esc(label.vendor)}</div>
-      <div class="label-meta">${esc(label.meta)}</div>
-      <div class="label-price">${money(label.price)}</div>
+    const price='₹'+Number(label.price||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});
+    div.innerHTML=`<div class="label-heading"><span>SS</span><strong>${esc(price)}</strong></div>
       <svg class="barcode-svg" data-barcode="${escAttr(label.barcode)}"></svg>
-      <div class="label-mrp">MRP ${money(label.mrp)}</div>`;
+      <div class="label-tier">${esc(label.tierCode||label.barcode)}</div>`;
     sheet.appendChild(div);
   });
   try{
     area.querySelectorAll('.barcode-svg').forEach(svg=>{
       JsBarcode(svg,svg.dataset.barcode,{
-        format:'CODE128',displayValue:true,width:2,height:48,
+        format:'CODE128',displayValue:false,width:2,height:48,
         font:'Arial',fontSize:14,textMargin:3,
         margin:0,marginLeft:12,marginRight:12,marginTop:2,marginBottom:2,
         background:'#ffffff',lineColor:'#000000'

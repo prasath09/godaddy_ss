@@ -209,7 +209,11 @@ function printGeneratedStickers(pieces){
       area.appendChild(sheet);
     }
     const div=document.createElement("div"); div.className="barcode-label";
-    div.innerHTML=`<div class="label-category">${esc(piece.CategoryName||"")}</div><div class="label-description">${esc(piece.Particulars||"")}</div><div class="price">${money(piece.SellingPrice)}</div><svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg><div class="label-code">${esc(piece.PieceBarcode)}</div><div class="label-mrp">MRP ${money(piece.MRP)}</div>`;
+    const price='₹'+Number(piece.SellingPrice||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});
+    const tierCode=piece.TierCode||String(piece.PieceBarcode||'').split('-B')[0];
+    div.innerHTML=`<div class="label-heading"><span>SS</span><strong>${esc(price)}</strong></div>
+      <svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg>
+      <div class="label-tier">${esc(tierCode)}</div>`;
     sheet.appendChild(div);
   });
   area.style.display="none";

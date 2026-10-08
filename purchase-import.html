@@ -24,7 +24,7 @@
     .summarybar{display:flex;gap:20px;flex-wrap:wrap;padding-top:12px;font-size:13px}.summarybar strong{font-size:16px}#printArea{display:none}
     /* NOVAJET 24L: 64 x 34 mm, 67 mm horizontal pitch. */
     .sticker-sheet{display:grid;width:198mm;height:272mm;grid-template-columns:repeat(3,64mm);grid-template-rows:repeat(8,34mm);column-gap:3mm;row-gap:0;align-content:start}
-    .barcode-label{box-sizing:border-box;width:64mm;height:34mm;border:0;padding:2mm 3mm;text-align:center;background:#fff;overflow:hidden;break-inside:avoid;page-break-inside:avoid;display:grid;grid-template-rows:2.5mm 3mm 4mm 11mm 3mm 2mm;justify-items:center;align-items:center;align-content:center;font:9px/1 Arial,sans-serif;color:#000}
+    .barcode-label{box-sizing:border-box;width:64mm;height:34mm;border:0;padding:2mm 3mm;text-align:center;background:#fff;overflow:hidden;break-inside:avoid;page-break-inside:avoid;display:flex;flex-direction:column;align-items:center;justify-content:center;font:9px/1 Arial,sans-serif;color:#000}
     .label-category{font-weight:700;font-size:9px;width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
     .label-description{font-size:8px;width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
     .barcode-label .price{font-size:15px;font-weight:700;margin:0}
@@ -41,6 +41,10 @@
       .barcode-label{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     }
     @media(max-width:900px){.form-grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+
+    .label-heading{display:flex;align-items:baseline;justify-content:center;gap:3mm;width:100%;font-size:16px;margin-bottom:1mm}
+    .label-heading strong{font-size:19px;font-weight:700}
+    .label-tier{font:12px Arial,sans-serif;text-align:center;margin-top:1mm;white-space:nowrap;max-width:100%}
   </style>
   <script src="textile-config.js"></script>
   <script src="api-bridge.js"></script>

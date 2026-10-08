@@ -701,18 +701,17 @@ function printLastGeneratedStickers(){
     }
     const div=document.createElement('div');
     div.className='barcode-label';
-    div.innerHTML=`
-      <div class="label-vendor">${esc(piece.VendorName||'')}</div>
-      <div class="label-details">${esc(piece.CategoryName||'')} · ${esc(piece.TierCode||'')} · ${esc(piece.BatchNo||'')}</div>
-      <div class="label-price">${money(piece.SellingPrice)}</div>
+    const price='₹'+Number(piece.SellingPrice||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});
+    const tierCode=piece.TierCode||String(piece.PieceBarcode||'').split('-B')[0];
+    div.innerHTML=`<div class="label-heading"><span>SS</span><strong>${esc(price)}</strong></div>
       <svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg>
-      <div class="label-mrp">MRP ${money(piece.MRP)}</div>`;
+      <div class="label-tier">${esc(tierCode)}</div>`;
     sheet.appendChild(div);
   });
   try{
     area.querySelectorAll('.barcode-svg').forEach(svg=>{
       JsBarcode(svg,svg.dataset.barcode,{
-        format:'CODE128',displayValue:true,width:2,height:48,
+        format:'CODE128',displayValue:false,width:2,height:48,
         font:'Arial',fontSize:14,textMargin:3,
         margin:0,marginLeft:12,marginRight:12,marginTop:2,marginBottom:2,
         background:'#ffffff',lineColor:'#000000'
