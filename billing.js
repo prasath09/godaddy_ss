@@ -1987,7 +1987,7 @@ function downloadReceiptPDF(data) {
 
   doc.text(
 
-    'TEXTILE SHOP',
+    'SS TEXTILE',
 
     pageWidth / 2,
 
@@ -2907,7 +2907,7 @@ function buildReceiptHtml(data) {
 
 
 
-      <h2>TEXTILE SHOP</h2>
+      <h2>SS TEXTILE</h2>
 
 
 
