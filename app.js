@@ -2615,14 +2615,7 @@ function renderAll() {
     ]
   );
 
-  renderTable(
-    'list_categories',
-    DATA.categories,
-    [
-      'CategoryID',
-      'CategoryName'
-    ]
-  );
+  renderCategoryTierList();
 
   renderTable(
     'list_materials',
@@ -2721,7 +2714,7 @@ function addCategoryTierRow(code='',price=''){
 function showCategoryTierRows(){
   document.getElementById('cpt_rows').replaceChildren();msg('categorytiers','');
   const rows=(DATA.categoryPriceTiers||[]).filter(r=>String(r.CategoryID)===val('cpt_category'));
-  if(rows.length)rows.forEach(r=>addCategoryTierRow(r.TierCode,r.SellingPrice));else for(let i=0;i<3;i++)addCategoryTierRow();
+  if(rows.length)rows.forEach(r=>addCategoryTierRow(r.TierCode,r.SellingPrice));else addCategoryTierRow();
 }
 function saveCategoryTierRows(){
   const CategoryID=val('cpt_category');
@@ -2734,6 +2727,7 @@ function saveCategoryTierRows(){
     button.disabled=false;msg('categorytiers',res.message,'ok');
     DATA.categoryPriceTiers=(DATA.categoryPriceTiers||[]).filter(r=>String(r.CategoryID)!==CategoryID).concat(Rows.map(r=>({...r,CategoryID})));
     fillCategoryTierPresets();
+    renderCategoryTierList();
   }).withFailureHandler(e=>{button.disabled=false;msg('categorytiers',e.message||String(e),'err');}).saveCategoryPriceTiers({CategoryID,Rows});
 }
 
@@ -2748,4 +2742,13 @@ function applyCategoryTierPreset(){
   document.getElementById('pt_name').value=row.TierCode;
   document.getElementById('pt_selling').value=row.SellingPrice;
   document.getElementById('pt_mrp').value=row.SellingPrice;
+}
+
+function renderCategoryTierList(){
+  const rows=DATA.categories||[];
+  document.getElementById('list_categories').innerHTML='<table><thead><tr><th>Category ID</th><th>Category Name</th><th>Price Tiers</th></tr></thead><tbody>'+rows.map(category=>{
+    const tiers=(DATA.categoryPriceTiers||[]).filter(t=>String(t.CategoryID)===String(category.CategoryID)).sort((a,b)=>Number(a.SellingPrice)-Number(b.SellingPrice));
+    const text=tiers.length?tiers.map(t=>esc(t.TierCode)+' — '+esc('₹'+Number(t.SellingPrice).toLocaleString('en-IN',{maximumFractionDigits:2}))).join(' · '):'No tiers added';
+    return '<tr><td>'+esc(category.CategoryID)+'</td><td>'+esc(category.CategoryName)+'</td><td style="white-space:normal;line-height:1.8">'+text+'</td></tr>';
+  }).join('')+'</tbody></table>';
 }
