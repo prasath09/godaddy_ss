@@ -60,7 +60,7 @@
     <h3>1. Upload Purchase Excel</h3>
     <div class="upload-box">
       <input id="excel_file" type="file" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
-      <div class="note" style="margin-top:12px">Required in Excel: <strong>Qty and Purchase Price</strong>. Vendor Name is optional in Excel. Particulars, Category, MRP, Material, Design, Colour, Size and Remarks are optional. Select saved Category and Tier after upload; selling price fills automatically. Dress Prefix (e.g. B) is optional in Excel.</div>
+      <div class="note" style="margin-top:12px">Required in Excel: <strong>Qty and Purchase Price</strong>. Vendor Name is optional in Excel. Particulars, Category, MRP, Material, Design, Colour, Size and Remarks are optional. Select saved Category and Tier after upload; selling price fills automatically. Dress Codes are assigned automatically when saving.</div>
     </div>
     <div id="msg_upload" class="msg"></div>
   </div>
@@ -68,7 +68,7 @@
   <div class="card">
     <h3>2. Purchase Details</h3>
     <div class="form-grid">
-      <div><label>Vendor Name *</label><select id="vendor_name" onchange="vendorNameChanged()"><option value="">Select Vendor</option></select></div>
+      <div><label>Vendor Name *</label><input id="vendor_name" placeholder="Select or type vendor name" autocomplete="off" oninput="vendorNameChanged()"></div>
       <div><label>Invoice No. (optional)</label><input id="invoice_no" placeholder="Auto-generated if blank"></div>
       <div><label>Invoice Date</label><input id="invoice_date" type="date"></div>
       <div><label>Purchase Remarks</label><input id="purchase_remarks"></div>
@@ -77,7 +77,7 @@
 
   <div class="card">
     <h3>3. Review Stock Items</h3>
-    <div class="note">Select Category → relevant Tier Code. Selling price fills automatically. Enter purchase price, quantity and Dress Prefix (B). Dress Codes such as BT1-001 are assigned and saved when you add the purchase.</div>
+    <div class="note">Select Category → relevant Tier Code. Selling price fills automatically. Enter purchase price and quantity. Dress Codes such as 01-001 are assigned and saved when you add the purchase.</div>
     <div class="actions" id="review_actions"><button class="btn secondary" onclick="addBlankRow()">+ Add Row</button></div>
     <div id="import_table" class="table-wrap" style="margin-top:12px"><div class="muted" style="padding:12px">Upload an Excel file first.</div></div>
     <div id="import_totals" class="summarybar"></div>
@@ -95,11 +95,11 @@
 
   </div>
 <div class="card"><h3>5. Saved Barcodes & Reprint by Invoice</h3>
-<div class="form-grid"><div><label>Vendor</label><select id="reprint_vendor"></select></div><div><label>Supplier Invoice No.</label><input id="reprint_invoice" placeholder="Enter exact invoice number"></div></div>
+<div class="form-grid"><div><label>Vendor</label><input id="reprint_vendor" placeholder="Select or type vendor name" autocomplete="off"></div><div><label>Supplier Invoice No.</label><input id="reprint_invoice" placeholder="Enter exact invoice number"></div></div>
 <div class="actions"><button id="load_saved_btn" class="btn secondary" onclick="loadInvoiceBarcodes()">Load Saved Barcodes</button><button id="print_saved_btn" class="btn secondary" onclick="printSelectedBarcodes()" disabled>Print Selected Stickers</button></div>
 <div id="msg_reprint" class="msg"></div><div id="saved_barcode_list" class="table-wrap" style="margin-top:12px"></div></div>
 </div>
 <div id="printArea"></div>
-<script src="purchase-import.js"></script>
+<script src="purchase-import.js?v=auto-code-10"></script>
 </body>
 </html>

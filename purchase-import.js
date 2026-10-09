@@ -1,6 +1,27 @@
+const VendorEntry = {
+  rows: [],
+  ids: ['pur_vendor','purchase_vendor_display','vendor_name','reprint_vendor'],
+  fill(rows){
+    this.rows=rows||[];
+    this.ids.forEach(id=>{
+      const input=document.getElementById(id);if(!input||input.tagName!=='INPUT')return;
+      let list=document.getElementById(id+'_options');
+      if(!list){list=document.createElement('datalist');list.id=id+'_options';input.after(list);input.setAttribute('list',list.id);}
+      list.replaceChildren(...this.rows.map(row=>{const option=document.createElement('option');option.value=row.VendorName;return option;}));
+      const existing=this.rows.find(row=>String(row.VendorID)===input.value);
+      if(existing)input.value=existing.VendorName;
+    });
+  },
+  key(id){
+    const raw=String(document.getElementById(id)?.value||'').trim();
+    const row=this.rows.find(row=>String(row.VendorName).trim().toLowerCase()===raw.toLowerCase());
+    return row?String(row.VendorID):raw;
+  },
+  name(id){return String(document.getElementById(id)?.value||'').trim();}
+};
 let IMPORT_ROWS=[],GENERATED_PIECES=[],SAVED_PIECES=[],PURCHASE_SAVED=false,SAVING=false,VENDOR_FROM_EXCEL=false;
 let SETUP={vendors:[],categories:[],categoryPriceTiers:[]},SETUP_READY=false;
-window.onload=async()=>{setToday();document.getElementById('excel_file').disabled=true;try{SETUP=await callGas('getPurchaseSetup');SETUP_READY=true;for(const id of ['vendor_name','reprint_vendor'])document.getElementById(id).innerHTML=options(SETUP.vendors,'VendorID','VendorName','');document.getElementById('excel_file').disabled=false;renderTable();}catch(e){msg('upload','Unable to load masters: '+e.message,'err');}};
+window.onload=async()=>{setToday();document.getElementById('excel_file').disabled=true;try{SETUP=await callGas('getPurchaseSetup');SETUP_READY=true;VendorEntry.fill(SETUP.vendors);document.getElementById('excel_file').disabled=false;renderTable();}catch(e){msg('upload','Unable to load masters: '+e.message,'err');}};
 function clean(v){ return String(v ?? "").trim(); }
 function upper(v){ return clean(v).toUpperCase(); }
 function esc(v){ return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c])); }
@@ -80,15 +101,15 @@ function loadWorkbook(wb){
 }
 
 
-function setTopVendorFromExcel(name){if(!name)return;const v=SETUP.vendors.find(v=>upper(v.VendorName)===upper(name));document.getElementById('vendor_name').value=v?v.VendorID:'';if(!v)msg('review','Excel vendor not found. Select an existing vendor or create it in Masters.','warn');}
+function setTopVendorFromExcel(name){if(!name)return;const v=SETUP.vendors.find(v=>upper(v.VendorName)===upper(name));document.getElementById('vendor_name').value=v?v.VendorName:name;if(!v)msg('review','New vendor will be added to Vendor Master when the purchase is saved.','warn');}
 function resolveExcelTier(r){const c=SETUP.categories.find(c=>upper(c.CategoryName)===upper(r.Category));const t=SETUP.categoryPriceTiers.find(t=>upper(t.TierCode)===upper(r.Code)&&(!c||String(t.CategoryID)===String(c.CategoryID)));r.CategoryID=c?.CategoryID||t?.CategoryID||'';r.CategoryPriceTierID=t?.CategoryPriceTierID||'';syncTier(r);}
 function syncTier(r){const t=SETUP.categoryPriceTiers.find(t=>String(t.CategoryPriceTierID)===String(r.CategoryPriceTierID)&&String(t.CategoryID)===String(r.CategoryID));r.Code=t?.TierCode||'';r.SellingPrice=Number(t?.SellingPrice||0);r.Category=SETUP.categories.find(c=>String(c.CategoryID)===String(r.CategoryID))?.CategoryName||'';if(!r.MRP&&t)r.MRP=r.SellingPrice;}
 function vendorNameChanged(){validateReady();}
 function addBlankRow(){if(!SETUP_READY||SAVING||PURCHASE_SAVED)return;IMPORT_ROWS.push({Qty:1,PurchasePrice:0,MRP:0,CategoryID:'',CategoryPriceTierID:'',DressPrefix:'',Particulars:'',Material:'',Design:'',Colour:'',Size:'',Remarks:''});renderTable();validateReady();}
 function updateRow(i,f,v){if(SAVING||PURCHASE_SAVED)return;const r=IMPORT_ROWS[i];if(!r)return;r[f]=['Qty','PurchasePrice','MRP'].includes(f)?Number(v):clean(v);if(f==='DressPrefix')r[f]=upper(v);if(f==='CategoryID'){r.CategoryPriceTierID='';syncTier(r);renderTable();}if(f==='CategoryPriceTierID'){r.MRP=0;syncTier(r);renderTable();}renderTotals();validateReady();}
 function removeRow(i){if(SAVING||PURCHASE_SAVED)return;IMPORT_ROWS.splice(i,1);renderTable();validateReady();}
-function renderTable(){const fields=['Particulars','DressPrefix','PurchasePrice','MRP','Material','Design','Colour','Size','Qty','Remarks'];
-const headings=['Particulars','Dress Prefix','Purchase Price','MRP','Material','Design','Colour','Size','Qty','Remarks'];
+function renderTable(){const fields=['Particulars','PurchasePrice','MRP','Material','Design','Colour','Size','Qty','Remarks'];
+const headings=['Particulars','Purchase Price','MRP','Material','Design','Colour','Size','Qty','Remarks'];
 if(!IMPORT_ROWS.length){document.getElementById('import_table').innerHTML='<div class="muted" style="padding:12px">Upload Excel or click Add Row.</div>';renderTotals();return;}
 document.getElementById('import_table').innerHTML='<table><thead><tr><th>#</th><th>Category</th><th>Tier Code</th><th>Selling Price</th>'+headings.map(h=>'<th>'+h+'</th>').join('')+'<th></th></tr></thead><tbody>'+IMPORT_ROWS.map((r,i)=>{
 const tiers=SETUP.categoryPriceTiers.filter(t=>String(t.CategoryID)===String(r.CategoryID)).map(t=>({...t,Display:t.TierCode+' — '+money(t.SellingPrice)}));
@@ -101,17 +122,17 @@ function renderTotals(){
 }
 
 
-function validateReady(){let error='';if(!SETUP_READY)error='Masters are still loading.';else if(!IMPORT_ROWS.length)error='Upload Excel or add a stock row.';else if(!document.getElementById('vendor_name').value)error='Select Vendor.';else if(!document.getElementById('invoice_date').value)error='Select Invoice Date.';else for(const r of IMPORT_ROWS){syncTier(r);if(!r.CategoryPriceTierID||!r.Code||r.SellingPrice<=0){error='Select Category and Tier Code for every row.';break;}if(!/^[A-Z0-9]{1,20}$/.test(upper(r.DressPrefix))){error='Enter Dress Prefix for every row, e.g. B.';break;}if(!Number.isSafeInteger(r.Qty)||r.Qty<=0){error='Quantity must be a positive whole number.';break;}if(!Number.isFinite(r.PurchasePrice)||r.PurchasePrice<=0){error='Enter positive Purchase Price.';break;}if(!Number.isFinite(r.MRP)||r.MRP<r.SellingPrice){error='MRP must be at least Selling Price.';break;}}
+function validateReady(){let error='';if(!SETUP_READY)error='Masters are still loading.';else if(!IMPORT_ROWS.length)error='Upload Excel or add a stock row.';else if(!document.getElementById('vendor_name').value)error='Select Vendor.';else if(!document.getElementById('invoice_date').value)error='Select Invoice Date.';else for(const r of IMPORT_ROWS){syncTier(r);if(!r.CategoryPriceTierID||!r.Code||r.SellingPrice<=0){error='Select Category and Tier Code for every row.';break;}if(!Number.isSafeInteger(r.Qty)||r.Qty<=0){error='Quantity must be a positive whole number.';break;}if(!Number.isFinite(r.PurchasePrice)||r.PurchasePrice<=0){error='Enter positive Purchase Price.';break;}if(!Number.isFinite(r.MRP)||r.MRP<r.SellingPrice){error='MRP must be at least Selling Price.';break;}}
 document.getElementById('generate_btn').disabled=!!error||SAVING||PURCHASE_SAVED;if(!PURCHASE_SAVED)msg('review',error||'Ready to save purchase.',error?'warn':'ok');return !error&&!SAVING&&!PURCHASE_SAVED;}
 function setFormLocked(locked){document.querySelectorAll('#excel_file,#vendor_name,#invoice_no,#invoice_date,#purchase_remarks,#review_actions button,#import_table input,#import_table select,#import_table button').forEach(el=>el.disabled=locked);}
 async function addPurchase(){if(!validateReady())return;SAVING=true;setFormLocked(true);document.getElementById('generate_btn').disabled=true;try{
-const vendorId=Number(document.getElementById('vendor_name').value),invoice=document.getElementById('invoice_no').value.trim()||'IMP-'+Date.now();
-const res=await callGas('createPurchase',{VendorID:vendorId,InvoiceNo:invoice,InvoiceDate:document.getElementById('invoice_date').value,Remarks:document.getElementById('purchase_remarks').value,Items:IMPORT_ROWS.map(r=>({CategoryID:r.CategoryID,CategoryPriceTierID:r.CategoryPriceTierID,DressPrefix:upper(r.DressPrefix),Qty:r.Qty,PurchasePrice:r.PurchasePrice,MRP:r.MRP,Material:r.Material,Design:r.Design,Colour:r.Colour,Size:r.Size,Remarks:[r.Particulars,r.Remarks].filter(Boolean).join(' | ')}))});
+const vendorId=VendorEntry.key('vendor_name'),invoice=document.getElementById('invoice_no').value.trim()||'IMP-'+Date.now();
+const res=await callGas('createPurchase',{VendorID:vendorId,VendorName:VendorEntry.name('vendor_name'),InvoiceNo:invoice,InvoiceDate:document.getElementById('invoice_date').value,Remarks:document.getElementById('purchase_remarks').value,Items:IMPORT_ROWS.map(r=>({CategoryID:r.CategoryID,CategoryPriceTierID:r.CategoryPriceTierID,Qty:r.Qty,PurchasePrice:r.PurchasePrice,MRP:r.MRP,Material:r.Material,Design:r.Design,Colour:r.Colour,Size:r.Size,Remarks:[r.Particulars,r.Remarks].filter(Boolean).join(' | ')}))});
 if(res?.error||res?.ok===false||res?.success===false)throw Error(res.message||res.error||'Purchase failed.');
-PURCHASE_SAVED=true;SAVING=false;GENERATED_PIECES=res.generatedPieces||[];renderTable();document.getElementById('invoice_no').value=invoice;document.getElementById('reprint_vendor').value=vendorId;document.getElementById('reprint_invoice').value=invoice;showSavedPieces(GENERATED_PIECES);document.getElementById('generated_summary').textContent='Purchase ID: '+res.purchaseId+' | Invoice: '+invoice+' | Saved Dress Codes: '+GENERATED_PIECES.length;msg('generate','Purchase saved. Items are read-only. Print from Saved Barcodes below.','ok');msg('review','Purchase saved.','ok');
+PURCHASE_SAVED=true;SAVING=false;GENERATED_PIECES=res.generatedPieces||[];renderTable();document.getElementById('invoice_no').value=invoice;document.getElementById('reprint_vendor').value=VendorEntry.name('vendor_name');callGas('getPurchaseSetup').then(setup=>{SETUP=setup;VendorEntry.fill(SETUP.vendors);}).catch(()=>{});document.getElementById('reprint_invoice').value=invoice;showSavedPieces(GENERATED_PIECES);document.getElementById('generated_summary').textContent='Purchase ID: '+res.purchaseId+' | Invoice: '+invoice+' | Saved Dress Codes: '+GENERATED_PIECES.length;msg('generate','Purchase saved. Items are read-only. Print from Saved Barcodes below.','ok');msg('review','Purchase saved.','ok');
 }catch(e){SAVING=false;setFormLocked(false);validateReady();msg('generate',e.message||String(e),'err');}}
 function clearImport(){if(SAVING)return;PURCHASE_SAVED=false;IMPORT_ROWS=[];GENERATED_PIECES=[];setFormLocked(false);for(const id of ['excel_file','vendor_name','invoice_no','purchase_remarks'])document.getElementById(id).value='';document.getElementById('generated_summary').textContent='No purchase added yet.';setToday();renderTable();validateReady();msg('generate','');}
-async function loadInvoiceBarcodes(){const vendorId=Number(document.getElementById('reprint_vendor').value),invoice=document.getElementById('reprint_invoice').value.trim();if(!vendorId||!invoice)return msg('reprint','Select Vendor and enter Invoice No.','err');showSavedPieces([]);document.getElementById('load_saved_btn').disabled=true;try{const res=await callGas('getPurchaseBarcodesByInvoice',vendorId,invoice);showSavedPieces(res.pieces||[]);msg('reprint','Purchase ID: '+res.purchaseId+' | '+SAVED_PIECES.length+' saved barcode(s) loaded.','ok');}catch(e){msg('reprint',e.message||String(e),'err');}finally{document.getElementById('load_saved_btn').disabled=false;}}
+async function loadInvoiceBarcodes(){const vendorId=VendorEntry.key('reprint_vendor'),invoice=document.getElementById('reprint_invoice').value.trim();if(!vendorId||!invoice)return msg('reprint','Select Vendor and enter Invoice No.','err');showSavedPieces([]);document.getElementById('load_saved_btn').disabled=true;try{const res=await callGas('getPurchaseBarcodesByInvoice',vendorId,invoice);showSavedPieces(res.pieces||[]);msg('reprint','Purchase ID: '+res.purchaseId+' | '+SAVED_PIECES.length+' saved barcode(s) loaded.','ok');}catch(e){msg('reprint',e.message||String(e),'err');}finally{document.getElementById('load_saved_btn').disabled=false;}}
 function showSavedPieces(pieces){SAVED_PIECES=pieces;document.getElementById('print_saved_btn').disabled=!pieces.length;document.getElementById('saved_barcode_list').innerHTML=pieces.length?'<table style="min-width:650px"><thead><tr><th><input type="checkbox" checked onchange="selectAllSaved(this.checked)"></th><th>Dress Code</th><th>Category</th><th>Tier</th><th>Selling Price</th><th>Status</th></tr></thead><tbody>'+pieces.map((p,i)=>'<tr><td><input class="saved-check" type="checkbox" checked data-index="'+i+'"></td><td>'+esc(p.PieceBarcode)+'</td><td>'+esc(p.CategoryName)+'</td><td>'+esc(p.TierCode)+'</td><td>'+money(p.SellingPrice)+'</td><td>'+esc(p.Status)+'</td></tr>').join('')+'</tbody></table>':'';}
 function selectAllSaved(checked){document.querySelectorAll('.saved-check').forEach(el=>el.checked=checked);}
 function printSelectedBarcodes(){const pieces=[...document.querySelectorAll('.saved-check:checked')].map(el=>SAVED_PIECES[Number(el.dataset.index)]);if(!pieces.length)return msg('reprint','Select at least one sticker.','warn');printGeneratedStickers(pieces);}

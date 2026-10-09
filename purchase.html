@@ -167,7 +167,7 @@
 
         <label>Purchase Vendor</label>
 
-        <select id="purchase_vendor_display"></select>
+        <input id="purchase_vendor_display" placeholder="Select or type vendor name" autocomplete="off">
 
       </div>
 
@@ -223,7 +223,7 @@
       <div><label>Selling Price (automatic)</label><input id="pur_selling" readonly></div>
       <div><label>Purchase Price *</label><input id="pur_cost" type="number" min="0.01" step="0.01"></div>
       <div><label>MRP *</label><input id="pur_mrp" type="number" min="0.01" step="0.01"></div>
-      <div><label>Dress Code Prefix *</label><input id="pur_dress_prefix" maxlength="20" placeholder="B → BT1-001"></div>
+      <div><label>Dress Code</label><input value="Automatically assigned on Save Purchase" readonly></div>
     </div>
     <div id="tier_result" class="tier-card" style="display:none">
 
@@ -333,6 +333,10 @@
 
 
 
+<div class="card"><h3>Saved Barcodes &amp; Reprint by Invoice</h3>
+<div class="form-grid"><div><label>Vendor — select or type</label><input id="reprint_vendor" list="reprint_vendor_options" placeholder="Select or type vendor name" autocomplete="off"><datalist id="reprint_vendor_options"></datalist></div><div><label>Supplier Invoice No.</label><input id="reprint_invoice" placeholder="Enter exact invoice number"></div></div>
+<div class="actions"><button id="load_saved_btn" class="btn secondary" onclick="loadInvoiceSavedBarcodes()">Load Saved Barcodes</button><button id="print_saved_btn" class="btn secondary" onclick="printInvoiceSelectedBarcodes()" disabled>Print Selected Stickers</button></div>
+<div id="invoice_saved_list" class="table-wrap"></div><div id="msg_invoice_saved" class="msg"></div></div>
   <div class="card">
 
     <h3>Individual Piece Sticker Printing</h3>
@@ -385,8 +389,8 @@
 
 
 
-<div class="card" style="max-width:1200px;margin:20px auto"><h3>Reprint Saved Dress Barcodes</h3><label>Purchase ID (from Purchase History)</label><input id="saved_barcode_purchase" type="number" min="1"><div class="actions"><button class="btn secondary" onclick="loadStandaloneSavedBarcodes()">Load Saved Barcodes</button><button id="saved_barcode_print" class="btn primary" onclick="printLastGeneratedStickers()" disabled>Print Saved Barcodes</button></div><div id="saved_barcode_list" class="table-wrap"></div><div id="msg_savedbarcodes" class="msg"></div></div>
-<script src="purchase.js"></script>
+
+<script src="purchase.js?v=auto-code-10"></script>
 
 </body>
 

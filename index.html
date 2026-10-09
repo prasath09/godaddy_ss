@@ -685,8 +685,6 @@
 
           <div id="printArea" style="display:none"></div>
         </div>
-
-        <div class="card"><h3>Reprint Saved Dress Barcodes</h3><p class="muted">Enter the Purchase ID from Purchase History to load its saved codes, including sold pieces.</p><div class="form-grid"><div><label>Purchase ID</label><input id="saved_barcode_purchase" type="number" min="1"></div></div><div class="actions"><button class="btn secondary" onclick="loadSavedDressBarcodes()">Load Saved Barcodes</button><button id="saved_barcode_print" class="btn primary" onclick="printSavedDressBarcodes()" disabled>Print Saved Barcodes</button></div><div id="saved_barcode_list" class="table-wrap"></div><div id="msg_savedbarcodes" class="msg"></div></div>
       </section>
 
 
@@ -700,7 +698,7 @@
 
             <div>
               <label>Vendor *</label>
-              <select id="pur_vendor" onchange="purchaseVendorChanged()"></select>
+              <input id="pur_vendor" placeholder="Select or type vendor name" autocomplete="off" onchange="purchaseVendorChanged()">
             </div>
 
             <div>
@@ -727,7 +725,7 @@
 
           <div class="note">
             Scan or type the Tier Code (example: JT1), or manually select Vendor → Category → Price Tier.
-            Enter purchase price, quantity and dress prefix. Saving creates a unique dress barcode for every piece (e.g. BT1-001).
+            Enter purchase price, quantity and dress prefix. Saving creates a unique dress barcode for every piece (e.g. 01-001).
           </div>
 
           <div class="form-grid three" style="margin-top:12px">
@@ -787,7 +785,7 @@
             <div><label>Purchase Price *</label><input id="pur_cost" type="number" min="0.01" step="0.01"></div>
             <div><label>Selling Price (automatic)</label><input id="pur_selling" readonly></div>
             <div><label>MRP *</label><input id="pur_mrp" type="number" min="0.01" step="0.01"></div>
-            <div><label>Dress Code Prefix *</label><input id="pur_dress_prefix" maxlength="20" placeholder="B for vendor → BT1-001" oninput="this.value=this.value.toUpperCase()"></div>
+            <div><label>Dress Code</label><input value="Automatically assigned on Save Purchase" readonly></div>
           </div>
           <div id="pur_tier_info" class="note" style="margin-top:12px">
             Select a Price Tier or enter the Tier Code.
@@ -824,6 +822,10 @@
         </div>
 
 
+<div class="card"><h3>Saved Barcodes &amp; Reprint by Invoice</h3>
+<div class="form-grid"><div><label>Vendor — select or type</label><input id="reprint_vendor" list="reprint_vendor_options" placeholder="Select or type vendor name" autocomplete="off"><datalist id="reprint_vendor_options"></datalist></div><div><label>Supplier Invoice No.</label><input id="reprint_invoice" placeholder="Enter exact invoice number"></div></div>
+<div class="actions"><button id="load_saved_btn" class="btn secondary" onclick="loadInvoiceSavedBarcodes()">Load Saved Barcodes</button><button id="print_saved_btn" class="btn secondary" onclick="printInvoiceSelectedBarcodes()" disabled>Print Selected Stickers</button></div>
+<div id="invoice_saved_list" class="table-wrap"></div><div id="msg_invoice_saved" class="msg"></div></div>
         <div class="card">
           <h3>Recent Purchases</h3>
           <div id="purchase_history" class="table-wrap"></div>
@@ -1022,7 +1024,7 @@
 </div>
 
 
-<script src="app.js"></script>
+<script src="app.js?v=auto-code-10"></script>
 
 
 </body>
