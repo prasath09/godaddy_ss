@@ -1949,7 +1949,7 @@ function downloadReceiptPDF(data) {
 
       unit:'mm',
 
-      format:'a5'
+      format:[148,210]
 
     });
 
@@ -1961,9 +1961,9 @@ function downloadReceiptPDF(data) {
 
 
 
-  const left = 10;
+  const left = 8;
 
-  const right = pageWidth - 10;
+  const right = pageWidth - 8;
 
   const qtyX = pageWidth * 0.58;
 
@@ -2828,11 +2828,13 @@ function buildReceiptHtml(data) {
       <style>
 
         @page{
-          size:A5 portrait;
+          size:148mm 210mm;
           margin:8mm;
         }
 
         html,body{
+          width:148mm;
+          min-height:210mm;
           margin:0;
           padding:0;
         }
@@ -2841,7 +2843,7 @@ function buildReceiptHtml(data) {
           font-family:Arial,sans-serif;
           color:#111;
           font-size:12px;
-          width:100%;
+          box-sizing:border-box;
         }
 
 
@@ -2902,7 +2904,8 @@ function buildReceiptHtml(data) {
 
         @media print{
           html,body{
-            width:100%;
+            width:148mm !important;
+            min-height:210mm !important;
             margin:0 !important;
             padding:0 !important;
           }
