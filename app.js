@@ -2969,7 +2969,7 @@ function applyCategoryTierPreset(){
   if(!row)return;
   document.getElementById('pt_name').value=row.TierCode;
   document.getElementById('pt_selling').value=row.SellingPrice;
-  document.getElementById('pt_mrp').value=row.SellingPrice;
+  document.getElementById('pt_mrp').value='';
 }
 
 function renderCategoryTierList(){
@@ -2992,7 +2992,7 @@ function fillPurchasePriceTiers(){
 function showSelectedPurchaseTier(){
   const tier=(DATA.categoryPriceTiers||[]).find(r=>String(r.CategoryPriceTierID)===val('pur_tier'));
   document.getElementById('pur_selling').value=tier?money(tier.SellingPrice):'';
-  document.getElementById('pur_mrp').value=tier?tier.SellingPrice:'';
+  document.getElementById('pur_mrp').value='';
   document.getElementById('pur_tier_info').textContent=tier?'Selected '+tier.TierCode+'. Enter purchase price and quantity. The system assigns a new Dress Code when saved. Dress codes are saved when the purchase is posted.':'Select a category and its Tier Code.';
 }
 function purchaseBarcodeKey(e){
@@ -3003,11 +3003,16 @@ function purchaseBarcodeKey(e){
 }
 function addPurchaseLine(){
   const tier=(DATA.categoryPriceTiers||[]).find(r=>String(r.CategoryPriceTierID)===val('pur_tier'));
-  const qty=Number(val('pur_qty')),cost=Number(val('pur_cost')),mrp=Number(val('pur_mrp')),prefix='' ;
+  const qty=Number(val('pur_qty')),cost=Number(val('pur_cost'));
+  const mrpRaw=val('pur_mrp');
+  const mrp=mrpRaw===''?0:Number(mrpRaw);
+  const prefix='' ;
   if(!val('pur_vendor'))return msg('purchase_line','Select Vendor.','err');
   if(!tier)return msg('purchase_line','Select Category and Tier Code.','err');
   if(!Number.isSafeInteger(qty)||qty<=0)return msg('purchase_line','Enter a whole quantity greater than zero.','err');
-  if(!Number.isFinite(cost)||cost<=0||!Number.isFinite(mrp)||mrp<=0)return msg('purchase_line','Enter valid purchase price and MRP.','err');
+  if(!Number.isFinite(cost)||cost<=0)return msg('purchase_line','Enter a valid purchase price.','err');
+  if(!Number.isFinite(mrp)||mrp<0)return msg('purchase_line','MRP cannot be negative.','err');
+  if(mrp>0 && Number(tier.SellingPrice)>mrp)return msg('purchase_line','Selling Price cannot exceed MRP.','err');
 
   const category=(DATA.categories||[]).find(c=>String(c.CategoryID)===String(tier.CategoryID));
   const vendor=(DATA.vendors||[]).find(v=>String(v.VendorID)===val('pur_vendor'));
