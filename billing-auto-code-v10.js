@@ -1,35 +1,3 @@
-function receiptItemLabel(item) {
-  const category = String(item.CategoryName || '').trim().toUpperCase();
-  const code = String(item.Barcode || '').trim();
-  return category ? category + '/' + code : code;
-}
-
-function receiptDisplayCode(item) {
-  const code = String(item.DressCode || item.Barcode || '').trim();
-  // Remove only the generated piece suffix; retain the vendor + tier prefix.
-  return code.replace(/-B\d+-\d+$/i, '').replace(/-\d+$/, '') ||
-    String(item.TierCode || item.SourceBarcode || '').trim();
-}
-
-function groupReceiptItems(items) {
-  const groups = new Map();
-  (items || []).forEach(item => {
-    const code = receiptDisplayCode(item);
-    const qty = Number(item.Qty ?? 1);
-    const rate = Number(item.Rate || 0);
-    const discount = Number(item.DiscountPct || 0);
-    const amount = Number(item.LineTotal ?? (qty * rate * (1 - discount / 100)));
-    // Include effective discount in case older receipts omit DiscountPct.
-    const effectiveDiscount = qty * rate ? Number((1 - amount / (qty * rate)).toFixed(8)) : 0;
-    const key = JSON.stringify([String(item.CategoryName || "").trim().toUpperCase(), code, rate, discount, effectiveDiscount]);
-    if (!groups.has(key)) groups.set(key, {...item, Barcode: code, Qty: 0, LineTotal: 0});
-    const group = groups.get(key);
-    group.Qty += qty;
-    group.LineTotal += amount;
-  });
-  return Array.from(groups.values());
-}
-
 let POS_CART = [];
 
 let LAST_SALE_ID = '';
@@ -1930,90 +1898,1210 @@ function completeSale() {
 
 
 function downloadReceiptPDF(data) {
-  if (!window.jspdf?.jsPDF) throw new Error('PDF library not loaded.');
-  const sale=data.sale||{}, items=groupReceiptItems(data.items||[]);
-  const doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const width=doc.internal.pageSize.getWidth(), height=doc.internal.pageSize.getHeight();
-  const left=10,right=width-10,customerX=width/2+2;
-  let y=15;
-  function text(value,x,yy,bold=false,size=10,align='left') {
-    doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);
-    doc.text(String(value),x,yy,{align});
+
+  if (
+
+    !window.jspdf ||
+
+    !window.jspdf.jsPDF
+
+  ) {
+
+    throw new Error(
+
+      'PDF library not loaded.'
+
+    );
+
   }
-  text('SS BRANDED OUTLET',width/2,y,true,15,'center');y+=12;
-  const customerLines=doc.splitTextToSize('Customer Name: '+(sale.CustomerName||'Walk-in'),right-customerX);
-  const dateLines=doc.splitTextToSize('Date: '+fmtDate(sale.SaleDate),customerX-left-4);
-  doc.setFontSize(9);
-  text(dateLines.join('\n'),left,y,false,9);text(customerLines.join('\n'),customerX,y,false,9);
-  y+=Math.max(customerLines.length,dateLines.length)*4+3;
-  const billLines=doc.splitTextToSize('Bill No: '+(sale.BillNo||''),customerX-left-4);
-  text(billLines.join('\n'),left,y,false,9);text('Mobile: '+(sale.CustomerMobile||'-'),customerX,y,false,9);
-  y+=billLines.length*4+7;
-  const qtyX=width*.47,rateX=width*.69;
-  function tableHeader(){
-    doc.line(left,y,right,y);y+=6;
-    text('Item',left,y,true);text('Qty',qtyX,y,true,10,'right');
-    text('Rate (Rs.)',rateX,y,true,9,'right');text('Amount (Rs.)',right,y,true,9,'right');
-    y+=3;doc.line(left,y,right,y);y+=6;
+
+
+
+  const sale =
+
+    data.sale || {};
+
+
+
+  const items =
+
+    data.items || [];
+
+
+
+  const payments =
+
+    data.payments || [];
+
+
+
+  const { jsPDF } =
+
+    window.jspdf;
+
+
+
+  const doc =
+
+    new jsPDF({
+
+      orientation:'portrait',
+
+      unit:'mm',
+
+      format:'a5'
+
+    });
+
+
+
+  const pageWidth =
+
+    doc.internal.pageSize.getWidth();
+
+
+
+  const left = 10;
+
+  const right = pageWidth - 10;
+
+  const qtyX = pageWidth * 0.58;
+
+  const rateX = pageWidth * 0.76;
+
+  const totalLabelX = pageWidth * 0.74;
+
+
+
+  let y = 16;
+
+
+
+  doc.setFont(
+
+    'helvetica',
+
+    'bold'
+
+  );
+
+
+
+  doc.setFontSize(16);
+
+
+
+  doc.text(
+
+    'SS TEXTILE',
+
+    pageWidth / 2,
+
+    y,
+
+    {align:'center'}
+
+  );
+
+
+
+  y += 7;
+
+
+
+  doc.setFont(
+
+    'helvetica',
+
+    'normal'
+
+  );
+
+
+
+  doc.setFontSize(10);
+
+
+
+  if (data.locationName) {
+
+    doc.text(
+
+      String(data.locationName),
+
+      pageWidth / 2,
+
+      y,
+
+      {align:'center'}
+
+    );
+
+
+
+    y += 5;
+
   }
-  tableHeader();
-  items.forEach(item=>{
+
+
+
+  doc.text(
+
+    'Sales Bill',
+
+    pageWidth / 2,
+
+    y,
+
+    {align:'center'}
+
+  );
+
+
+
+  y += 7;
+
+
+
+  doc.line(
+
+    left,
+
+    y,
+
+    right,
+
+    y
+
+  );
+
+
+
+  y += 6;
+
+
+
+  doc.setFontSize(10);
+
+
+
+  doc.text(
+
+    'Bill: ' +
+
+    String(sale.BillNo || ''),
+
+    left,
+
+    y
+
+  );
+
+
+
+  doc.text(
+
+    'Date: ' +
+
+    fmtDate(sale.SaleDate),
+
+    right,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  y += 6;
+
+
+
+  doc.text(
+
+    'Customer: ' +
+
+    String(
+
+      sale.CustomerName ||
+
+      'Walk-in'
+
+    ),
+
+    left,
+
+    y
+
+  );
+
+
+
+  if (sale.CustomerMobile) {
+
+    y += 5;
+
+
+
+    doc.text(
+
+      'Mobile: ' +
+
+      String(sale.CustomerMobile),
+
+      left,
+
+      y
+
+    );
+
+  }
+
+
+
+  y += 8;
+
+
+
+  doc.setFont(
+
+    'helvetica',
+
+    'bold'
+
+  );
+
+
+
+  doc.text(
+
+    'Item',
+
+    left,
+
+    y
+
+  );
+
+
+
+  doc.text(
+
+    'Qty',
+
+    qtyX,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  doc.text(
+
+    'Rate',
+
+    rateX,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  doc.text(
+
+    'Amount',
+
+    right,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  y += 3;
+
+
+
+  doc.line(
+
+    left,
+
+    y,
+
+    right,
+
+    y
+
+  );
+
+
+
+  y += 5;
+
+
+
+  doc.setFont(
+
+    'helvetica',
+
+    'normal'
+
+  );
+
+
+
+  items.forEach(i => {
+
+    if (y > 190) {
+
+      doc.addPage();
+
+      y = 18;
+
+    }
+
+
+
+    const itemName =
+
+      String(
+
+        (i.CategoryName || '') +
+
+        ' / ' +
+
+        (i.TierName || '')
+
+      );
+
+
+
+    const itemLines =
+
+      doc.splitTextToSize(
+
+        itemName,
+
+        pageWidth * 0.48
+
+      );
+
+
+
+    doc.text(
+
+      itemLines,
+
+      left,
+
+      y
+
+    );
+
+
+
+    doc.text(
+
+      String(i.Qty || 1),
+
+      qtyX,
+
+      y,
+
+      {align:'right'}
+
+    );
+
+
+
+    doc.text(
+
+      Number(i.Rate || 0)
+
+        .toFixed(2),
+
+      rateX,
+
+      y,
+
+      {align:'right'}
+
+    );
+
+
+
+    doc.text(
+
+      Number(i.LineTotal || 0)
+
+        .toFixed(2),
+
+      right,
+
+      y,
+
+      {align:'right'}
+
+    );
+
+
+
+    const nameHeight =
+
+      Math.max(
+
+        itemLines.length * 4,
+
+        4
+
+      );
+
+
+
+    y += nameHeight;
+
+
+
+    doc.setFontSize(8);
+
+
+
+    doc.text(
+
+      String(i.Barcode || ''),
+
+      left,
+
+      y
+
+    );
+
+
+
     doc.setFontSize(10);
-    const codes=doc.splitTextToSize(receiptItemLabel(item),qtyX-left-8);
-    const rowHeight=Math.max(7,codes.length*4+3);
-    if(y+rowHeight>height-15){doc.addPage();y=15;text('SS BRANDED OUTLET',width/2,y,true,13,'center');y+=10;tableHeader();}
-    text(codes.join('\n'),left,y);text(item.Qty,qtyX,y,false,10,'right');
-    text(Number(item.Rate||0).toFixed(2),rateX,y,false,10,'right');
-    text(Number(item.LineTotal||0).toFixed(2),right,y,false,10,'right');
-    y+=rowHeight;
+
+
+
+    y += 6;
+
   });
-  const payments=data.payments||[];
-  const paymentLines=payments.flatMap(payment=>doc.splitTextToSize('Payment Mode: '+String(payment.PaymentMode||''),right-left));
-  const summaryHeight=48+paymentLines.length*5;
-  if(y+summaryHeight>height-10){doc.addPage();y=18;}
-  y+=5;
-  const labelX=right-36;
-  function total(label,value,bold=false){text(label,labelX,y,bold,10,'right');text(Number(value||0).toFixed(2),right,y,bold,10,'right');y+=6;}
-  total('Subtotal:',sale.SubTotal);
-  if(Number(sale.LineDiscount||0))total('Item Discount:',sale.LineDiscount);
-  total('Bill Discount:',sale.BillDiscount);
-  doc.line(left,y-2,right,y-2);y+=4;
-  total('NET AMOUNT:',sale.NetAmount,true);
-  doc.line(left,y-2,right,y-2);y+=4;
-  text('Amount is inclusive of GST.',right,y,false,8,'right');y+=9;
-  paymentLines.forEach(line=>{text(line,left,y,false,9);y+=5;});
-  y+=8;text('Thank you! Visit again.',width/2,y,false,10,'center');
-  doc.save(String(sale.BillNo||'Bill').replace(/[^A-Za-z0-9_-]/g,'_')+'.pdf');
+
+
+
+  y += 2;
+
+
+
+  doc.line(
+
+    left,
+
+    y,
+
+    right,
+
+    y
+
+  );
+
+
+
+  y += 7;
+
+
+
+
+
+  doc.text(
+
+    'Subtotal:',
+
+    totalLabelX,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  doc.text(
+
+    Number(sale.SubTotal || 0)
+
+      .toFixed(2),
+
+    right,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  y += 5;
+
+
+
+  doc.text(
+
+    'Item Discount:',
+
+    totalLabelX,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  doc.text(
+
+    Number(sale.LineDiscount || 0)
+
+      .toFixed(2),
+
+    right,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  y += 5;
+
+
+
+  doc.text(
+
+    'Bill Discount:',
+
+    totalLabelX,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  doc.text(
+
+    Number(sale.BillDiscount || 0)
+
+      .toFixed(2),
+
+    right,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  y += 6;
+
+
+
+  doc.setFont(
+
+    'helvetica',
+
+    'bold'
+
+  );
+
+
+
+  doc.setFontSize(12);
+
+
+
+  doc.text(
+
+    'Net Amount:',
+
+    totalLabelX,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  doc.text(
+
+    'Rs. ' +
+
+    Number(sale.NetAmount || 0)
+
+      .toFixed(2),
+
+    right,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  y += 9;
+
+
+
+  doc.setFont(
+
+    'helvetica',
+
+    'normal'
+
+  );
+
+
+
+  doc.setFontSize(10);
+
+
+
+  doc.text(
+
+    'Payment:',
+
+    left,
+
+    y
+
+  );
+
+
+
+  y += 5;
+
+
+
+  payments.forEach(p => {
+
+    let line =
+
+      String(p.PaymentMode || '') +
+
+      ': Rs. ' +
+
+      Number(p.Amount || 0)
+
+        .toFixed(2);
+
+
+
+    if (p.ReferenceNo) {
+
+      line +=
+
+        ' (' +
+
+        String(p.ReferenceNo) +
+
+        ')';
+
+    }
+
+
+
+    doc.text(
+
+      line,
+
+      left,
+
+      y
+
+    );
+
+
+
+    y += 5;
+
+  });
+
+
+
+  y += 6;
+
+
+
+  doc.text(
+
+    'Thank you',
+
+    pageWidth / 2,
+
+    y,
+
+    {align:'center'}
+
+  );
+
+
+
+  const safeBillNo =
+
+    String(
+
+      sale.BillNo ||
+
+      'Bill'
+
+    )
+
+    .replace(
+
+      /[^A-Za-z0-9_-]/g,
+
+      '_'
+
+    );
+
+
+
+  doc.save(
+
+    safeBillNo +
+
+    '.pdf'
+
+  );
+
 }
 
+
+
+
+
 function buildReceiptHtml(data) {
-  const sale=data.sale||{},items=groupReceiptItems(data.items||[]);
-  const itemRows=items.map(item=>`<tr><td>${esc(receiptItemLabel(item))}</td><td class="num">${esc(item.Qty)}</td><td class="num">${Number(item.Rate||0).toFixed(2)}</td><td class="num">${Number(item.LineTotal||0).toFixed(2)}</td></tr>`).join('');
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(sale.BillNo||'Bill')}</title><style>
-  @page {size:A4 portrait;margin:10mm;}
-  *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;margin:0;font-size:10pt;}
-  .receipt{max-width:190mm;margin:auto}h1{text-align:center;font-size:17pt;margin:3mm 0 9mm;}
-  .details{display:grid;grid-template-columns:1fr 1fr;column-gap:6mm;row-gap:3mm;margin-bottom:7mm;font-size:9pt;}
-  .details>div{overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;table-layout:fixed;}
-  th,td{padding:3mm 1mm;text-align:left;overflow-wrap:anywhere;}
-  th{border-top:1px solid #111;border-bottom:1px solid #111;font-size:9pt;}
-  th:first-child{width:35%}th:nth-child(2){width:12%}th:nth-child(3){width:24%}th:nth-child(4){width:29%}
-  .num{text-align:right}thead{display:table-header-group}tr{break-inside:avoid;}
-  .summary{break-inside:avoid;margin-top:5mm}.total{display:flex;justify-content:flex-end;gap:4mm;margin:2.5mm 0}.total span:last-child{width:30mm;text-align:right;}
-  .net{font-size:12pt;font-weight:bold;border-top:1px solid #111;border-bottom:1px solid #111;padding:3mm 0;}
-  .gst{text-align:right;font-size:8pt;margin:2mm 0 6mm}.payment{font-size:9pt;margin-top:2mm}.thanks{text-align:center;margin-top:12mm;}
-  @media screen{body{background:#eee;padding:10mm}.receipt{background:white;padding:0;min-height:277mm}}
-  </style></head><body><main class="receipt"><h1>SS BRANDED OUTLET</h1>
-  <div class="details"><div><strong>Date:</strong> ${esc(fmtDate(sale.SaleDate))}</div><div><strong>Customer Name:</strong> ${esc(sale.CustomerName||'Walk-in')}</div><div><strong>Bill No:</strong> ${esc(sale.BillNo||'')}</div><div><strong>Mobile:</strong> ${esc(sale.CustomerMobile||'-')}</div></div>
-  <table><thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Rate (Rs.)</th><th class="num">Amount (Rs.)</th></tr></thead><tbody>${itemRows}</tbody></table>
-  <section class="summary"><div class="total"><span>Subtotal:</span><span>${money(sale.SubTotal)}</span></div>
-  ${Number(sale.LineDiscount||0)?`<div class="total"><span>Item Discount:</span><span>${money(sale.LineDiscount)}</span></div>`:''}
-  <div class="total"><span>Bill Discount:</span><span>${money(sale.BillDiscount)}</span></div>
-  <div class="total net"><span>NET AMOUNT:</span><span>${money(sale.NetAmount)}</span></div>
-  <div class="gst">Amount is inclusive of GST.</div>
-  ${(data.payments||[]).map(payment=>`<div class="payment"><strong>Payment Mode:</strong> ${esc(payment.PaymentMode)}</div>`).join('')}
-  <div class="thanks">Thank you! Visit again.</div></section></main></body></html>`;
+
+  const sale =
+
+    data.sale || {};
+
+
+
+  const items =
+
+    data.items || [];
+
+
+
+  const payments =
+
+    data.payments || [];
+
+
+
+  const itemRows =
+
+    items
+
+      .map(i => `
+
+        <tr>
+
+          <td>
+
+            ${esc(i.CategoryName)}
+
+            /
+
+            ${esc(i.TierName)}
+
+            <br>
+
+            <small>
+
+              ${esc(i.Barcode)}
+
+            </small>
+
+          </td>
+
+
+
+          <td style="text-align:right">
+
+            ${i.Qty}
+
+          </td>
+
+
+
+          <td style="text-align:right">
+
+            ${Number(i.Rate || 0).toFixed(2)}
+
+          </td>
+
+
+
+          <td style="text-align:right">
+
+            ${Number(i.LineTotal || 0).toFixed(2)}
+
+          </td>
+
+        </tr>
+
+      `)
+
+      .join('');
+
+
+
+  const paymentRows =
+
+    payments
+
+      .map(p => `
+
+        <div>
+
+          ${esc(p.PaymentMode)}:
+
+          ₹${Number(p.Amount || 0).toFixed(2)}
+
+          ${
+
+            p.ReferenceNo
+
+              ? '(' + esc(p.ReferenceNo) + ')'
+
+              : ''
+
+          }
+
+        </div>
+
+      `)
+
+      .join('');
+
+
+
+  return `
+
+    <!doctype html>
+
+    <html>
+
+
+
+    <head>
+
+      <title>${esc(sale.BillNo || 'Bill')}</title>
+
+
+
+      <style>
+
+        @page{
+          size:A5 portrait;
+          margin:8mm;
+        }
+
+        html,body{
+          margin:0;
+          padding:0;
+        }
+
+        body{
+          font-family:Arial,sans-serif;
+          color:#111;
+          font-size:12px;
+          width:100%;
+        }
+
+
+
+        h2{
+
+          text-align:center;
+
+          margin:0 0 4px;
+
+        }
+
+
+
+        .center{
+
+          text-align:center;
+
+        }
+
+
+
+        table{
+
+          width:100%;
+
+          border-collapse:collapse;
+
+          margin-top:12px;
+
+        }
+
+
+
+        th,td{
+
+          border-bottom:1px solid #ddd;
+
+          padding:7px 3px;
+
+          text-align:left;
+
+        }
+
+
+
+        .totals{
+
+          margin-top:14px;
+
+          text-align:right;
+
+          line-height:1.8;
+
+        }
+
+
+
+        @media print{
+          html,body{
+            width:100%;
+            margin:0 !important;
+            padding:0 !important;
+          }
+          button{display:none}
+        }
+
+      </style>
+
+    </head>
+
+
+
+    <body>
+
+
+
+      <h2>SS TEXTILE</h2>
+
+
+
+      <div class="center">
+
+        ${esc(data.locationName || '')}
+
+      </div>
+
+
+
+      <div class="center">
+
+        Sales Bill
+
+      </div>
+
+
+
+      <hr>
+
+
+
+      <div>
+
+        <strong>Bill:</strong>
+
+        ${esc(sale.BillNo || '')}
+
+      </div>
+
+
+
+      <div>
+
+        <strong>Date:</strong>
+
+        ${esc(fmtDate(sale.SaleDate))}
+
+      </div>
+
+
+
+      <div>
+
+        <strong>Customer:</strong>
+
+        ${esc(sale.CustomerName || 'Walk-in')}
+
+      </div>
+
+
+
+      ${
+
+        sale.CustomerMobile
+
+          ? `
+
+            <div>
+
+              <strong>Mobile:</strong>
+
+              ${esc(sale.CustomerMobile)}
+
+            </div>
+
+          `
+
+          : ''
+
+      }
+
+
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>Item</th>
+
+            <th style="text-align:right">Qty</th>
+
+            <th style="text-align:right">Rate</th>
+
+            <th style="text-align:right">Amount</th>
+
+          </tr>
+
+        </thead>
+
+
+
+        <tbody>
+
+          ${itemRows}
+
+        </tbody>
+
+      </table>
+
+
+
+      <div class="totals">
+
+        <div>
+
+          Subtotal:
+
+          ₹${Number(sale.SubTotal || 0).toFixed(2)}
+
+        </div>
+
+
+
+        <div>
+
+          Item Discount:
+
+          ₹${Number(sale.LineDiscount || 0).toFixed(2)}
+
+        </div>
+
+
+
+        <div>
+
+          Bill Discount:
+
+          ₹${Number(sale.BillDiscount || 0).toFixed(2)}
+
+        </div>
+
+
+
+        <div style="font-size:17px">
+
+          <strong>
+
+            Net Amount:
+
+            ₹${Number(sale.NetAmount || 0).toFixed(2)}
+
+          </strong>
+
+        </div>
+
+      </div>
+
+
+
+      <div style="margin-top:12px">
+
+        <strong>Payment</strong>
+
+        ${paymentRows}
+
+      </div>
+
+
+
+      <p class="center" style="margin-top:22px">
+
+        Thank you
+
+      </p>
+
+
+
+    </body>
+
+    </html>
+
+  `;
+
 }
+
+
+
+
 
 function printReceiptData(
 

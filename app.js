@@ -2637,11 +2637,21 @@ function printSale(saleId) {
           <title>${esc(sale.BillNo || 'Bill')}</title>
 
           <style>
+            @page{
+              size:A5 portrait;
+              margin:8mm;
+            }
+
+            html,body{
+              margin:0;
+              padding:0;
+            }
+
             body{
               font-family:Arial,sans-serif;
-              padding:18px;
               color:#111;
-              font-size:13px;
+              font-size:12px;
+              width:100%;
             }
 
             h2{
@@ -2673,6 +2683,11 @@ function printSale(saleId) {
             }
 
             @media print{
+              html,body{
+                width:100%;
+                margin:0 !important;
+                padding:0 !important;
+              }
               button{display:none}
             }
           </style>
