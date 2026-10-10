@@ -1949,7 +1949,7 @@ function downloadReceiptPDF(data) {
 
       unit:'mm',
 
-      format:[148,210]
+      format:'a4'
 
     });
 
@@ -1961,15 +1961,9 @@ function downloadReceiptPDF(data) {
 
 
 
-  const left = 8;
+  const left = 14;
 
-  const right = pageWidth - 8;
-
-  const qtyX = pageWidth * 0.58;
-
-  const rateX = pageWidth * 0.76;
-
-  const totalLabelX = pageWidth * 0.74;
+  const right = pageWidth - 14;
 
 
 
@@ -1993,7 +1987,7 @@ function downloadReceiptPDF(data) {
 
   doc.text(
 
-    'SS TEXTILE',
+    'SS BRANDED OUTLET',
 
     pageWidth / 2,
 
@@ -2003,18 +1997,15 @@ function downloadReceiptPDF(data) {
 
   );
 
+  y += 6;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.text('GSTIN: 33NGTPS6785L1ZX', pageWidth / 2, y, {align:'center'});
 
-
-  y += 7;
-
-
-
+  y += 6;
   doc.setFont(
-
     'helvetica',
-
     'normal'
-
   );
 
 
@@ -2191,7 +2182,7 @@ function downloadReceiptPDF(data) {
 
     'Qty',
 
-    qtyX,
+    118,
 
     y,
 
@@ -2205,7 +2196,7 @@ function downloadReceiptPDF(data) {
 
     'Rate',
 
-    rateX,
+    150,
 
     y,
 
@@ -2263,7 +2254,7 @@ function downloadReceiptPDF(data) {
 
   items.forEach(i => {
 
-    if (y > 190) {
+    if (y > 270) {
 
       doc.addPage();
 
@@ -2273,19 +2264,12 @@ function downloadReceiptPDF(data) {
 
 
 
-    const itemName =
-
-      String(
-
-        (i.CategoryName || '') +
-
-        ' / ' +
-
-        (i.TierName || '')
-
-      );
-
-
+    const rawCode = String(i.Barcode || '').trim();
+    const category = String(i.CategoryName || '').trim().toUpperCase();
+    const cleanCode = rawCode.includes('/') ? rawCode.split('/').pop() : rawCode;
+    const itemName = category && cleanCode
+      ? category + '/' + cleanCode
+      : (rawCode || category);
 
     const itemLines =
 
@@ -2293,7 +2277,7 @@ function downloadReceiptPDF(data) {
 
         itemName,
 
-        pageWidth * 0.48
+        82
 
       );
 
@@ -2315,7 +2299,7 @@ function downloadReceiptPDF(data) {
 
       String(i.Qty || 1),
 
-      qtyX,
+      118,
 
       y,
 
@@ -2331,7 +2315,7 @@ function downloadReceiptPDF(data) {
 
         .toFixed(2),
 
-      rateX,
+      150,
 
       y,
 
@@ -2357,43 +2341,8 @@ function downloadReceiptPDF(data) {
 
 
 
-    const nameHeight =
-
-      Math.max(
-
-        itemLines.length * 4,
-
-        4
-
-      );
-
-
-
-    y += nameHeight;
-
-
-
-    doc.setFontSize(8);
-
-
-
-    doc.text(
-
-      String(i.Barcode || ''),
-
-      left,
-
-      y
-
-    );
-
-
-
-    doc.setFontSize(10);
-
-
-
-    y += 6;
+    const nameHeight = Math.max(itemLines.length * 4, 4);
+    y += nameHeight + 2;
 
   });
 
@@ -2420,6 +2369,8 @@ function downloadReceiptPDF(data) {
   y += 7;
 
 
+
+  const totalLabelX = 145;
 
 
 
@@ -2732,21 +2683,7 @@ function buildReceiptHtml(data) {
         <tr>
 
           <td>
-
-            ${esc(i.CategoryName)}
-
-            /
-
-            ${esc(i.TierName)}
-
-            <br>
-
-            <small>
-
-              ${esc(i.Barcode)}
-
-            </small>
-
+            ${esc((String(i.CategoryName || '').toUpperCase()) + '/' + (String(i.Barcode || '').includes('/') ? String(i.Barcode || '').split('/').pop() : String(i.Barcode || '')))}
           </td>
 
 
@@ -2827,23 +2764,16 @@ function buildReceiptHtml(data) {
 
       <style>
 
-        @page{
-          size:148mm 210mm;
-          margin:8mm;
-        }
-
-        html,body{
-          width:148mm;
-          min-height:210mm;
-          margin:0;
-          padding:0;
-        }
-
         body{
+
           font-family:Arial,sans-serif;
+
+          padding:18px;
+
           color:#111;
-          font-size:12px;
-          box-sizing:border-box;
+
+          font-size:13px;
+
         }
 
 
@@ -2903,13 +2833,9 @@ function buildReceiptHtml(data) {
 
 
         @media print{
-          html,body{
-            width:148mm !important;
-            min-height:210mm !important;
-            margin:0 !important;
-            padding:0 !important;
-          }
+
           button{display:none}
+
         }
 
       </style>
@@ -2922,7 +2848,8 @@ function buildReceiptHtml(data) {
 
 
 
-      <h2>SS TEXTILE</h2>
+      <h2>SS BRANDED OUTLET</h2>
+      <div class="center">GSTIN: 33NGTPS6785L1ZX</div>
 
 
 
