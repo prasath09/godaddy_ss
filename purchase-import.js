@@ -133,7 +133,7 @@ PURCHASE_SAVED=true;SAVING=false;GENERATED_PIECES=res.generatedPieces||[];render
 }catch(e){SAVING=false;setFormLocked(false);validateReady();msg('generate',e.message||String(e),'err');}}
 function clearImport(){if(SAVING)return;PURCHASE_SAVED=false;IMPORT_ROWS=[];GENERATED_PIECES=[];setFormLocked(false);for(const id of ['excel_file','vendor_name','invoice_no','purchase_remarks'])document.getElementById(id).value='';document.getElementById('generated_summary').textContent='No purchase added yet.';setToday();renderTable();validateReady();msg('generate','');}
 async function loadInvoiceBarcodes(){const vendorId=VendorEntry.key('reprint_vendor'),invoice=document.getElementById('reprint_invoice').value.trim();if(!vendorId||!invoice)return msg('reprint','Select Vendor and enter Invoice No.','err');showSavedPieces([]);document.getElementById('load_saved_btn').disabled=true;try{const res=await callGas('getPurchaseBarcodesByInvoice',vendorId,invoice);showSavedPieces(res.pieces||[]);msg('reprint','Purchase ID: '+res.purchaseId+' | '+SAVED_PIECES.length+' saved barcode(s) loaded.','ok');}catch(e){msg('reprint',e.message||String(e),'err');}finally{document.getElementById('load_saved_btn').disabled=false;}}
-function showSavedPieces(pieces){SAVED_PIECES=pieces;document.getElementById('print_saved_btn').disabled=!pieces.length;document.getElementById('saved_barcode_list').innerHTML=pieces.length?'<table style="min-width:650px"><thead><tr><th><input type="checkbox" checked onchange="selectAllSaved(this.checked)"></th><th>Dress Code</th><th>Category</th><th>Tier</th><th>Selling Price</th><th>Status</th></tr></thead><tbody>'+pieces.map((p,i)=>'<tr><td><input class="saved-check" type="checkbox" checked data-index="'+i+'"></td><td>'+esc(p.PieceBarcode)+'</td><td>'+esc(p.CategoryName)+'</td><td>'+esc(p.TierCode)+'</td><td>'+money(p.SellingPrice)+'</td><td>'+esc(p.Status)+'</td></tr>').join('')+'</tbody></table>':'';}
+function showSavedPieces(pieces){SAVED_PIECES=pieces;document.getElementById('print_saved_btn').disabled=!pieces.length;document.getElementById('saved_barcode_list').innerHTML=pieces.length?'<table style="min-width:650px"><thead><tr><th><input type="checkbox" checked onchange="selectAllSaved(this.checked)"></th><th>Dress Code</th><th>Size</th><th>Category</th><th>Tier</th><th>Selling Price</th><th>Status</th></tr></thead><tbody>'+pieces.map((p,i)=>'<tr><td><input class="saved-check" type="checkbox" checked data-index="'+i+'"></td><td>'+esc(p.PieceBarcode)+'</td><td>'+esc(p.Size||'')+'</td><td>'+esc(p.CategoryName)+'</td><td>'+esc(p.TierCode)+'</td><td>'+money(p.SellingPrice)+'</td><td>'+esc(p.Status)+'</td></tr>').join('')+'</tbody></table>':'';}
 function selectAllSaved(checked){document.querySelectorAll('.saved-check').forEach(el=>el.checked=checked);}
 function printSelectedBarcodes(){const pieces=[...document.querySelectorAll('.saved-check:checked')].map(el=>SAVED_PIECES[Number(el.dataset.index)]);if(!pieces.length)return msg('reprint','Select at least one sticker.','warn');printGeneratedStickers(pieces);}
 function printGeneratedStickers(pieces){
@@ -149,9 +149,10 @@ function printGeneratedStickers(pieces){
     const div=document.createElement("div"); div.className="barcode-label";
     const price='₹'+Number(piece.SellingPrice||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});
     const tierCode=piece.PieceBarcode;
+    const size=String(piece.Size||'').trim().toUpperCase();
     div.innerHTML=`<div class="label-heading"><span>SS</span><strong>${esc(price)}</strong></div>
       <svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg>
-      <div class="label-tier">${esc(tierCode)}</div>`;
+      <div class="label-bottom"><span class="label-code-left">${esc(tierCode)}</span><span class="label-size-right">${esc(size)}</span></div>`;
     sheet.appendChild(div);
   });
   area.style.display="none";

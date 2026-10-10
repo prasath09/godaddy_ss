@@ -814,7 +814,8 @@ function reprintBarcodeEditor(){
   printNovajetLabels(BARCODE_EDIT_RESULT.pieces.map(piece=>({
     price:piece.SellingPrice,
     barcode:piece.PieceBarcode,
-    tierCode:piece.PieceBarcode
+    tierCode:piece.PieceBarcode,
+    size:piece.Size||''
   })));
 }
 
@@ -962,7 +963,7 @@ function printLastGeneratedStickers() {
   printNovajetLabels(LAST_GENERATED_PIECES.map(piece=>({
     vendor:piece.VendorName||'',
     meta:[piece.CategoryName,piece.TierCode,piece.BatchNo].filter(Boolean).join(' · '),
-    price:piece.SellingPrice,mrp:piece.MRP,barcode:piece.PieceBarcode,tierCode:piece.PieceBarcode
+    price:piece.SellingPrice,mrp:piece.MRP,barcode:piece.PieceBarcode,tierCode:piece.PieceBarcode,size:piece.Size||''
   })));
 }
 
@@ -984,7 +985,7 @@ function printNovajetLabels(labels){
     const price='₹'+Number(label.price||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});
     div.innerHTML=`<div class="label-heading"><span>SS</span><strong>${esc(price)}</strong></div>
       <svg class="barcode-svg" data-barcode="${escAttr(label.barcode)}"></svg>
-      <div class="label-tier">${esc(label.tierCode||label.barcode)}</div>`;
+      <div class="label-bottom"><span class="label-code-left">${esc(label.tierCode||label.barcode)}</span><span class="label-size-right">${esc(String(label.size||'').trim().toUpperCase())}</span></div>`;
     sheet.appendChild(div);
   });
   try{
@@ -3030,7 +3031,7 @@ function loadInvoiceSavedBarcodes(){
   document.getElementById('invoice_saved_list').innerHTML='';document.getElementById('load_saved_btn').disabled=true;
   google.script.run.withSuccessHandler(result=>{
     INVOICE_SAVED_PIECES=result.pieces||[];
-    document.getElementById('invoice_saved_list').innerHTML='<table><thead><tr><th><input type="checkbox" checked onchange="document.querySelectorAll(\'.invoice-piece-check\').forEach(c=>c.checked=this.checked)"></th><th>Dress Code</th><th>Selling Price</th><th>Status</th></tr></thead><tbody>'+INVOICE_SAVED_PIECES.map((piece,index)=>'<tr><td><input class="invoice-piece-check" type="checkbox" checked data-index="'+index+'"></td><td>'+esc(piece.PieceBarcode)+'</td><td>'+money(piece.SellingPrice)+'</td><td>'+esc(piece.Status)+'</td></tr>').join('')+'</tbody></table>';
+    document.getElementById('invoice_saved_list').innerHTML='<table><thead><tr><th><input type="checkbox" checked onchange="document.querySelectorAll(\'.invoice-piece-check\').forEach(c=>c.checked=this.checked)"></th><th>Dress Code</th><th>Size</th><th>Selling Price</th><th>Status</th></tr></thead><tbody>'+INVOICE_SAVED_PIECES.map((piece,index)=>'<tr><td><input class="invoice-piece-check" type="checkbox" checked data-index="'+index+'"></td><td>'+esc(piece.PieceBarcode)+'</td><td>'+esc(piece.Size||'')+'</td><td>'+money(piece.SellingPrice)+'</td><td>'+esc(piece.Status)+'</td></tr>').join('')+'</tbody></table>';
     document.getElementById('print_saved_btn').disabled=!INVOICE_SAVED_PIECES.length;
     document.getElementById('load_saved_btn').disabled=false;
     msg('invoice_saved','Purchase '+result.purchaseId+' — '+INVOICE_SAVED_PIECES.length+' original saved barcode(s) loaded.','ok');
@@ -3039,5 +3040,5 @@ function loadInvoiceSavedBarcodes(){
 function printInvoiceSelectedBarcodes(){
  const pieces=Array.from(document.querySelectorAll('.invoice-piece-check:checked')).map(el=>INVOICE_SAVED_PIECES[Number(el.dataset.index)]);
  if(!pieces.length)return msg('invoice_saved','Select at least one sticker.','err');
- printNovajetLabels(pieces.map(piece=>({price:piece.SellingPrice,barcode:piece.PieceBarcode,tierCode:piece.PieceBarcode}))); 
+ printNovajetLabels(pieces.map(piece=>({price:piece.SellingPrice,barcode:piece.PieceBarcode,tierCode:piece.PieceBarcode,size:piece.Size||''}))); 
 }

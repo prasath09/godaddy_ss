@@ -735,9 +735,10 @@ function printLastGeneratedStickers(){
     div.className='barcode-label';
     const price='₹'+Number(piece.SellingPrice||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});
     const tierCode=piece.PieceBarcode;
+    const size=String(piece.Size||'').trim().toUpperCase();
     div.innerHTML=`<div class="label-heading"><span>SS</span><strong>${esc(price)}</strong></div>
       <svg class="barcode-svg" data-barcode="${escAttr(piece.PieceBarcode)}"></svg>
-      <div class="label-tier">${esc(tierCode)}</div>`;
+      <div class="label-bottom"><span class="label-code-left">${esc(tierCode)}</span><span class="label-size-right">${esc(size)}</span></div>`;
     sheet.appendChild(div);
   });
   try{
@@ -883,7 +884,7 @@ function loadInvoiceSavedBarcodes(){
   document.getElementById('invoice_saved_list').innerHTML='';document.getElementById('load_saved_btn').disabled=true;
   google.script.run.withSuccessHandler(result=>{
     INVOICE_SAVED_PIECES=result.pieces||[];
-    document.getElementById('invoice_saved_list').innerHTML='<table><thead><tr><th><input type="checkbox" checked onchange="document.querySelectorAll(\'.invoice-piece-check\').forEach(c=>c.checked=this.checked)"></th><th>Dress Code</th><th>Selling Price</th><th>Status</th></tr></thead><tbody>'+INVOICE_SAVED_PIECES.map((piece,index)=>'<tr><td><input class="invoice-piece-check" type="checkbox" checked data-index="'+index+'"></td><td>'+esc(piece.PieceBarcode)+'</td><td>'+money(piece.SellingPrice)+'</td><td>'+esc(piece.Status)+'</td></tr>').join('')+'</tbody></table>';
+    document.getElementById('invoice_saved_list').innerHTML='<table><thead><tr><th><input type="checkbox" checked onchange="document.querySelectorAll(\'.invoice-piece-check\').forEach(c=>c.checked=this.checked)"></th><th>Dress Code</th><th>Size</th><th>Selling Price</th><th>Status</th></tr></thead><tbody>'+INVOICE_SAVED_PIECES.map((piece,index)=>'<tr><td><input class="invoice-piece-check" type="checkbox" checked data-index="'+index+'"></td><td>'+esc(piece.PieceBarcode)+'</td><td>'+esc(piece.Size||'')+'</td><td>'+money(piece.SellingPrice)+'</td><td>'+esc(piece.Status)+'</td></tr>').join('')+'</tbody></table>';
     document.getElementById('print_saved_btn').disabled=!INVOICE_SAVED_PIECES.length;
     document.getElementById('load_saved_btn').disabled=false;
     msg('invoice_saved','Purchase '+result.purchaseId+' — '+INVOICE_SAVED_PIECES.length+' original saved barcode(s) loaded.','ok');
