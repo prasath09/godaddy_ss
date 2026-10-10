@@ -70,6 +70,10 @@ document.querySelectorAll('.nav button').forEach(btn => {
     if (btn.dataset.target === 'ledger') {
       loadLedger();
     }
+
+    if (btn.dataset.target === 'pricetiers') {
+      setTimeout(() => document.getElementById('barcode_edit_search')?.focus(), 60);
+    }
   });
 });
 
@@ -368,7 +372,7 @@ function fillDropdowns() {
 
   fillPriceTierCategories();
   purchaseVendorChanged();
-  fillPrintBarcodes();
+  fillBarcodeEditorMasters();
 }
 
 
@@ -617,6 +621,168 @@ function savePriceTier() {
     });
 }
 
+
+
+/* =========================================================
+   BARCODE SEARCH / EDIT / REPRINT
+   Dress Code search updates the whole Dress Code group.
+   Full piece barcode search updates only that exact piece.
+   ========================================================= */
+
+let BARCODE_EDIT_RESULT = null;
+let BARCODE_EDIT_DIRTY = new Set();
+
+function fillBarcodeEditorMasters(){
+  const cat=document.getElementById('barcode_edit_category');
+  if(cat){
+    const old=cat.value;
+    cat.replaceChildren(new Option('-- Select --',''));
+    (DATA.categories||[]).forEach(c=>cat.add(new Option(c.CategoryName,c.CategoryID)));
+    if([...cat.options].some(o=>o.value===old))cat.value=old;
+  }
+  const material=document.getElementById('barcode_edit_material');
+  if(material){
+    const old=material.value;
+    material.replaceChildren(new Option('-- Select / Blank --',''));
+    (DATA.materials||[]).forEach(m=>material.add(new Option(m.MaterialName,m.MaterialName)));
+    if([...material.options].some(o=>o.value===old))material.value=old;
+  }
+  barcodeEditCategoryChanged(false);
+}
+
+function barcodeEditCategoryChanged(mark=true){
+  const select=document.getElementById('barcode_edit_tier');
+  if(!select)return;
+  const old=select.value;
+  select.replaceChildren(new Option('-- Select --',''));
+  (DATA.categoryPriceTiers||[])
+    .filter(t=>String(t.CategoryID)===String(val('barcode_edit_category')))
+    .forEach(t=>select.add(new Option(t.TierCode+' · '+money(t.SellingPrice),t.CategoryPriceTierID)));
+  if([...select.options].some(o=>o.value===old))select.value=old;
+  if(mark)markBarcodeEditDirty('CategoryID');
+}
+
+function barcodeEditTierChanged(){
+  const tier=(DATA.categoryPriceTiers||[]).find(t=>String(t.CategoryPriceTierID)===val('barcode_edit_tier'));
+  if(tier && !BARCODE_EDIT_DIRTY.has('SellingPrice')){
+    document.getElementById('barcode_edit_selling').value=Number(tier.SellingPrice||0).toFixed(2);
+  }
+}
+
+function markBarcodeEditDirty(field){
+  if(BARCODE_EDIT_RESULT)BARCODE_EDIT_DIRTY.add(field);
+}
+
+function barcodeEditSearchKey(e){
+  if(e.key!=='Enter')return;
+  e.preventDefault();
+  searchBarcodeForEdit();
+}
+
+function clearBarcodeEditor(){
+  BARCODE_EDIT_RESULT=null;
+  BARCODE_EDIT_DIRTY=new Set();
+  const search=document.getElementById('barcode_edit_search');
+  if(search)search.value='';
+  const card=document.getElementById('barcode_edit_card');
+  if(card)card.style.display='none';
+  const list=document.getElementById('barcode_edit_piece_list');
+  if(list)list.innerHTML='';
+  msg('barcode_edit_search','','');
+  msg('barcode_edit','','');
+  search?.focus();
+}
+
+function setBarcodeEditorValue(id,value,mixed=false){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.value=value==null?'':value;
+  el.placeholder=mixed?'Multiple values — type to change all':'';
+}
+
+function searchBarcodeForEdit(){
+  const search=val('barcode_edit_search').toUpperCase();
+  if(!search)return msg('barcode_edit_search','Enter a Dress Code or full piece barcode.','err');
+  const btn=document.getElementById('barcode_edit_search_btn');
+  btn.disabled=true;
+  msg('barcode_edit_search','Searching...','');
+  google.script.run.withSuccessHandler(result=>{
+    btn.disabled=false;
+    BARCODE_EDIT_RESULT=result;
+    BARCODE_EDIT_DIRTY=new Set();
+    fillBarcodeEditorMasters();
+    const d=result.details||{},mixed=new Set(result.mixedFields||[]);
+    document.getElementById('barcode_edit_card').style.display='block';
+    document.getElementById('barcode_edit_title').textContent=result.mode==='PIECE'?'Edit Piece Barcode '+result.search:'Edit Dress Code '+result.search;
+    document.getElementById('barcode_edit_scope').innerHTML=result.mode==='PIECE'
+      ? 'Only <strong>'+esc(result.search)+'</strong> will be updated.'
+      : 'Changes will apply to <strong>'+Number(result.quantity||0)+'</strong> product(s) under Dress Code <strong>'+esc(result.search)+'</strong>.';
+    document.getElementById('barcode_edit_category').value=String(d.CategoryID||'');
+    barcodeEditCategoryChanged(false);
+    document.getElementById('barcode_edit_tier').value=String(d.CategoryPriceTierID||'');
+    document.getElementById('barcode_edit_qty').value=Number(result.quantity||0);
+    setBarcodeEditorValue('barcode_edit_material',d.Material||'',mixed.has('Material'));
+    setBarcodeEditorValue('barcode_edit_design',d.Design||'',mixed.has('Design'));
+    setBarcodeEditorValue('barcode_edit_colour',d.Colour||'',mixed.has('Colour'));
+    setBarcodeEditorValue('barcode_edit_size',d.Size||'',mixed.has('Size'));
+    setBarcodeEditorValue('barcode_edit_remarks',d.Remarks||'',mixed.has('Remarks'));
+    setBarcodeEditorValue('barcode_edit_purchase',d.PurchasePrice,mixed.has('PurchasePrice'));
+    setBarcodeEditorValue('barcode_edit_selling',d.SellingPrice,mixed.has('SellingPrice'));
+    setBarcodeEditorValue('barcode_edit_mrp',d.MRP,mixed.has('MRP'));
+    renderBarcodeEditPieces(result.pieces||[]);
+    msg('barcode_edit_search',result.mode==='PIECE'?'Specific piece barcode loaded.':'Dress Code loaded. All pieces in this Dress Code are shown below.','ok');
+    msg('barcode_edit','','');
+  }).withFailureHandler(error=>{
+    btn.disabled=false;
+    BARCODE_EDIT_RESULT=null;
+    document.getElementById('barcode_edit_card').style.display='none';
+    msg('barcode_edit_search',error.message||String(error),'err');
+  }).getBarcodeEditInfo(search);
+}
+
+function renderBarcodeEditPieces(pieces){
+  const el=document.getElementById('barcode_edit_piece_list');
+  if(!el)return;
+  if(!pieces.length){el.innerHTML='';return;}
+  el.innerHTML='<table><thead><tr><th>Piece Barcode</th><th>Status</th><th>Category</th><th>Tier Code</th><th>Selling</th></tr></thead><tbody>'+
+    pieces.map(p=>'<tr><td><strong>'+esc(p.PieceBarcode)+'</strong></td><td>'+esc(p.Status)+'</td><td>'+esc(p.CategoryName||'')+'</td><td>'+esc(p.TierCode||'')+'</td><td>'+money(p.SellingPrice)+'</td></tr>').join('')+
+    '</tbody></table>';
+}
+
+function updateBarcodeDetails(){
+  if(!BARCODE_EDIT_RESULT)return msg('barcode_edit','Search a barcode first.','err');
+  if(!BARCODE_EDIT_DIRTY.size)return msg('barcode_edit','No fields were changed.','warn');
+  const categoryId=Number(val('barcode_edit_category'));
+  const tierId=Number(val('barcode_edit_tier'));
+  if(!categoryId||!tierId)return msg('barcode_edit','Select Category and Tier Code.','err');
+  const payload={Search:BARCODE_EDIT_RESULT.search,Mode:BARCODE_EDIT_RESULT.mode,CategoryID:categoryId,CategoryPriceTierID:tierId,ChangedFields:[...BARCODE_EDIT_DIRTY]};
+  const values={
+    PurchasePrice:val('barcode_edit_purchase'),SellingPrice:val('barcode_edit_selling'),MRP:val('barcode_edit_mrp'),
+    Material:val('barcode_edit_material'),Design:val('barcode_edit_design'),Colour:val('barcode_edit_colour'),Size:val('barcode_edit_size'),Remarks:val('barcode_edit_remarks')
+  };
+  Object.assign(payload,values);
+  const btn=document.getElementById('barcode_edit_update_btn');btn.disabled=true;
+  msg('barcode_edit','Updating...','');
+  google.script.run.withSuccessHandler(res=>{
+    btn.disabled=false;
+    msg('barcode_edit',res.message,'ok');
+    BARCODE_EDIT_DIRTY=new Set();
+    loadAll();
+    setTimeout(searchBarcodeForEdit,150);
+  }).withFailureHandler(error=>{
+    btn.disabled=false;
+    msg('barcode_edit',error.message||String(error),'err');
+  }).updateBarcodeDetails(payload);
+}
+
+function reprintBarcodeEditor(){
+  if(!BARCODE_EDIT_RESULT||!(BARCODE_EDIT_RESULT.pieces||[]).length)return msg('barcode_edit','Search a barcode first.','err');
+  printNovajetLabels(BARCODE_EDIT_RESULT.pieces.map(piece=>({
+    price:piece.SellingPrice,
+    barcode:piece.PieceBarcode,
+    tierCode:piece.PieceBarcode
+  })));
+}
 
 
 /* =========================================================

@@ -404,14 +404,13 @@
         Materials
       </button>
 
-      <button data-target="pricetiers">
-        Barcode Printing
-      </button>
-
       <div class="section">Inventory</div>
 
       <button data-target="purchase">
         Purchase / Stock Inward
+      </button>
+      <button data-target="pricetiers">
+        Barcode Search / Edit / Reprint
       </button>
       <button type="button" onclick="window.open('purchase-import.html','_blank')">
         Excel Purchase Import
@@ -658,33 +657,90 @@
 
 
         <div class="card">
-          <h3>Sticker Printing</h3>
+          <h3>Barcode Search / Edit / Reprint</h3>
+          <div class="note">
+            Search a Dress Code such as <strong>01</strong> to edit every piece under that Dress Code.
+            Search a full piece barcode such as <strong>01-001</strong> to edit only that one product.
+          </div>
 
-          <div class="form-grid">
-            <div>
-              <label>Select Barcode *</label>
-              <select id="print_barcode"></select>
-            </div>
-
-            <div>
-              <label>Number of Stickers *</label>
-              <input
-                id="print_qty"
-                type="number"
-                min="1"
-                step="1"
-                value="1">
+          <div class="form-grid" style="margin-top:12px">
+            <div class="full">
+              <label>Dress Code / Piece Barcode *</label>
+              <input id="barcode_edit_search" class="scan-box" placeholder="Example: 01 or 01-001" onkeydown="barcodeEditSearchKey(event)">
             </div>
           </div>
 
           <div class="actions">
-            <button class="btn secondary" onclick="printStickers()">
-              Print Stickers
-            </button>
+            <button class="btn secondary" id="barcode_edit_search_btn" onclick="searchBarcodeForEdit()">Search Barcode</button>
+            <button class="btn secondary" onclick="clearBarcodeEditor()">Clear</button>
+          </div>
+          <div id="msg_barcode_edit_search" class="msg"></div>
+        </div>
+
+        <div class="card" id="barcode_edit_card" style="display:none">
+          <h3 id="barcode_edit_title">Product Details</h3>
+          <div id="barcode_edit_scope" class="note" style="margin-bottom:12px"></div>
+
+          <div class="form-grid three">
+            <div>
+              <label>Category *</label>
+              <select id="barcode_edit_category" onchange="barcodeEditCategoryChanged();markBarcodeEditDirty('CategoryID')"></select>
+            </div>
+            <div>
+              <label>Tier Code *</label>
+              <select id="barcode_edit_tier" onchange="barcodeEditTierChanged();markBarcodeEditDirty('CategoryPriceTierID')"></select>
+            </div>
+            <div>
+              <label>Quantity</label>
+              <input id="barcode_edit_qty" readonly>
+            </div>
+
+            <div>
+              <label>Material (optional)</label>
+              <select id="barcode_edit_material" onchange="markBarcodeEditDirty('Material')"></select>
+            </div>
+            <div>
+              <label>Design / Style (optional)</label>
+              <input id="barcode_edit_design" oninput="markBarcodeEditDirty('Design')">
+            </div>
+            <div>
+              <label>Colour (optional)</label>
+              <input id="barcode_edit_colour" oninput="markBarcodeEditDirty('Colour')">
+            </div>
+            <div>
+              <label>Size (optional)</label>
+              <input id="barcode_edit_size" oninput="markBarcodeEditDirty('Size')">
+            </div>
+            <div>
+              <label>Line Remarks</label>
+              <input id="barcode_edit_remarks" oninput="markBarcodeEditDirty('Remarks')">
+            </div>
           </div>
 
-          <div id="printArea" style="display:none"></div>
+          <div class="form-grid three" style="margin-top:12px">
+            <div>
+              <label>Purchase Price *</label>
+              <input id="barcode_edit_purchase" type="number" min="0.01" step="0.01" oninput="markBarcodeEditDirty('PurchasePrice')">
+            </div>
+            <div>
+              <label>Selling Price *</label>
+              <input id="barcode_edit_selling" type="number" min="0.01" step="0.01" oninput="markBarcodeEditDirty('SellingPrice')">
+            </div>
+            <div>
+              <label>MRP *</label>
+              <input id="barcode_edit_mrp" type="number" min="0.01" step="0.01" oninput="markBarcodeEditDirty('MRP')">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" id="barcode_edit_update_btn" onclick="updateBarcodeDetails()">Update Details</button>
+            <button class="btn secondary" id="barcode_edit_print_btn" onclick="reprintBarcodeEditor()">Reprint Barcode</button>
+          </div>
+          <div id="msg_barcode_edit" class="msg"></div>
+          <div id="barcode_edit_piece_list" class="table-wrap" style="margin-top:12px"></div>
         </div>
+
+        <div id="printArea" style="display:none"></div>
       </section>
 
 
@@ -1024,7 +1080,7 @@
 </div>
 
 
-<script src="app.js?v=auto-code-10"></script>
+<script src="app.js?v=barcode-edit-1"></script>
 
 
 </body>
