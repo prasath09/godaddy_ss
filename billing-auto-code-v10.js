@@ -2002,55 +2002,7 @@ function downloadReceiptPDF(data) {
   doc.setFontSize(9);
   doc.text('GSTIN: 33NGTPS6785L1ZX', pageWidth / 2, y, {align:'center'});
 
-  y += 6;
-  doc.setFont(
-    'helvetica',
-    'normal'
-  );
-
-
-
-  doc.setFontSize(10);
-
-
-
-  if (data.locationName) {
-
-    doc.text(
-
-      String(data.locationName),
-
-      pageWidth / 2,
-
-      y,
-
-      {align:'center'}
-
-    );
-
-
-
-    y += 5;
-
-  }
-
-
-
-  doc.text(
-
-    'Sales Bill',
-
-    pageWidth / 2,
-
-    y,
-
-    {align:'center'}
-
-  );
-
-
-
-  y += 7;
+  y += 8;
 
 
 
@@ -2078,9 +2030,9 @@ function downloadReceiptPDF(data) {
 
   doc.text(
 
-    'Bill: ' +
+    'Date: ' +
 
-    String(sale.BillNo || ''),
+    fmtDate(sale.SaleDate),
 
     left,
 
@@ -2092,15 +2044,19 @@ function downloadReceiptPDF(data) {
 
   doc.text(
 
-    'Date: ' +
+    'Customer Name: ' +
 
-    fmtDate(sale.SaleDate),
+    String(
 
-    right,
+      sale.CustomerName ||
 
-    y,
+      'Walk-in'
 
-    {align:'right'}
+    ),
+
+    112,
+
+    y
 
   );
 
@@ -2112,15 +2068,9 @@ function downloadReceiptPDF(data) {
 
   doc.text(
 
-    'Customer: ' +
+    'Bill No: ' +
 
-    String(
-
-      sale.CustomerName ||
-
-      'Walk-in'
-
-    ),
+    String(sale.BillNo || ''),
 
     left,
 
@@ -2132,17 +2082,13 @@ function downloadReceiptPDF(data) {
 
   if (sale.CustomerMobile) {
 
-    y += 5;
-
-
-
     doc.text(
 
       'Mobile: ' +
 
       String(sale.CustomerMobile),
 
-      left,
+      112,
 
       y
 
@@ -2794,6 +2740,19 @@ function buildReceiptHtml(data) {
 
         }
 
+        .bill-info-grid{
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          column-gap:40px;
+          row-gap:10px;
+          margin-top:12px;
+          margin-bottom:12px;
+        }
+
+        .bill-info-grid > div:nth-child(even){
+          text-align:left;
+        }
+
 
 
         table{
@@ -2851,79 +2810,16 @@ function buildReceiptHtml(data) {
       <h2>SS BRANDED OUTLET</h2>
       <div class="center">GSTIN: 33NGTPS6785L1ZX</div>
 
-
-
-      <div class="center">
-
-        ${esc(data.locationName || '')}
-
-      </div>
-
-
-
-      <div class="center">
-
-        Sales Bill
-
-      </div>
-
-
-
       <hr>
 
 
 
-      <div>
-
-        <strong>Bill:</strong>
-
-        ${esc(sale.BillNo || '')}
-
+      <div class="bill-info-grid">
+        <div><strong>Date:</strong> ${esc(fmtDate(sale.SaleDate))}</div>
+        <div><strong>Customer Name:</strong> ${esc(sale.CustomerName || 'Walk-in')}</div>
+        <div><strong>Bill No:</strong> ${esc(sale.BillNo || '')}</div>
+        <div><strong>Mobile:</strong> ${esc(sale.CustomerMobile || '')}</div>
       </div>
-
-
-
-      <div>
-
-        <strong>Date:</strong>
-
-        ${esc(fmtDate(sale.SaleDate))}
-
-      </div>
-
-
-
-      <div>
-
-        <strong>Customer:</strong>
-
-        ${esc(sale.CustomerName || 'Walk-in')}
-
-      </div>
-
-
-
-      ${
-
-        sale.CustomerMobile
-
-          ? `
-
-            <div>
-
-              <strong>Mobile:</strong>
-
-              ${esc(sale.CustomerMobile)}
-
-            </div>
-
-          `
-
-          : ''
-
-      }
-
-
 
       <table>
 
