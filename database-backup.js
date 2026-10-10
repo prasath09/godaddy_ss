@@ -33,6 +33,9 @@ async function request(route,body){
   });
   if(!response.ok){
     const error=await response.json().catch(()=>({message:'Request failed: '+response.status}));
+    if(response.status===404 && (route==='export-csv' || route==='import-csv')){
+      throw Error('CSV table editor backend is not updated yet. Upload the latest database-admin.js to the backend and restart/redeploy the Node server.');
+    }
     throw Error(error.message||('Request failed: '+response.status));
   }
   return response;
@@ -102,7 +105,10 @@ async function uploadCsv(){
     body:csv
   });
   const result=await response.json().catch(()=>({message:'Import failed: '+response.status}));
-  if(!response.ok)throw Error(result.message||('Import failed: '+response.status));
+  if(!response.ok){
+    if(response.status===404)throw Error('CSV upload route is not available on the backend. Upload the latest database-admin.js and restart/redeploy the Node server.');
+    throw Error(result.message||('Import failed: '+response.status));
+  }
   status(
     'Table update completed successfully.\n'+
     'Table: '+result.table+'\n'+
