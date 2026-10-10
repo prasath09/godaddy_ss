@@ -1,9 +1,77 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Database Backup</title><style>
-*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#17212b;font:15px Arial,sans-serif}main{max-width:920px;margin:36px auto;padding:24px}section{background:white;border:1px solid #dce2e8;border-radius:12px;padding:22px;margin:18px 0}h1{margin:0 0 8px}p{line-height:1.5;color:#506070}label{display:block;margin:12px 0}input[type=url],input[type=password]{width:100%;padding:11px;border:1px solid #bac5d0;border-radius:6px}button{padding:12px 16px;border:0;border-radius:6px;background:#173d66;color:white;cursor:pointer;margin:5px 5px 5px 0;font-weight:bold}button:disabled{opacity:.45;cursor:wait}.danger{background:#b42318}#tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:5px}#tables label{margin:0;padding:10px;border:1px solid #e4e9ed;border-radius:6px}#status{white-space:pre-wrap;line-height:1.5}dialog{max-width:560px;width:90%;border:1px solid #bfcbd6;border-radius:12px;padding:24px}dialog::backdrop{background:#0007}#confirmTables{max-height:200px;overflow:auto;line-height:1.7}.hint{font-size:13px}a{color:#173d66}</style></head><body><main>
-<a href="index.html">← Back to shop</a><h1>Database Backup</h1><p>Download SQL backups and clear selected tables.</p>
-<section><label>API address<input id="api" type="url" placeholder="https://your-backend-address"></label><button id="load">Load Tables</button></section>
-<section><h2>Download backup</h2><button id="full">Download Full Backup</button><button id="structure">Download Structure Only</button><p class="hint">Full backup includes all table definitions and rows. Structure-only includes empty table definitions.</p></section>
-<section><h2>Select tables <small id="count"></small></h2><label><input id="selectAll" type="checkbox"> Select All</label><div id="tables">Load tables to select them.</div><br><button id="data">Download Selected Tables’ Data</button><button id="clear" class="danger">Clear Selected Tables’ Data</button><p class="hint">Clearing keeps table structures and current ID counters. Download a backup first. If locations or bill_sequence are cleared, required setup records must be recreated before shop use.</p><p class="hint">Selected-data SQL contains INSERT statements. GoDaddy’s replacement import drops tables first; use full/structure SQL for that importer, not a data-only file.</p></section>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Database Backup & Table Editor</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#17212b;font:15px Arial,sans-serif}main{max-width:980px;margin:36px auto;padding:24px}section{background:white;border:1px solid #dce2e8;border-radius:12px;padding:22px;margin:18px 0}h1{margin:0 0 8px}p{line-height:1.5;color:#506070}label{display:block;margin:12px 0}input[type=url],input[type=password],input[type=file]{width:100%;padding:11px;border:1px solid #bac5d0;border-radius:6px;background:white}button{padding:12px 16px;border:0;border-radius:6px;background:#173d66;color:white;cursor:pointer;margin:5px 5px 5px 0;font-weight:bold}button:disabled{opacity:.45;cursor:wait}.danger{background:#b42318}.success{background:#067647}#tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:5px}#tables label{margin:0;padding:10px;border:1px solid #e4e9ed;border-radius:6px}#status{white-space:pre-wrap;line-height:1.5}dialog{max-width:620px;width:90%;border:1px solid #bfcbd6;border-radius:12px;padding:24px}dialog::backdrop{background:#0007}#confirmTables{max-height:200px;overflow:auto;line-height:1.7}.hint{font-size:13px}.warn{padding:12px;border:1px solid #f5c26b;background:#fff8e6;border-radius:8px;color:#7a4b00}.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end}.selected-table{font-weight:700;color:#173d66}@media(max-width:700px){.editor-grid{grid-template-columns:1fr}}a{color:#173d66}
+</style>
+</head>
+<body>
+<main>
+<a href="index.html">← Back to shop</a>
+<h1>Database Backup & Table Editor</h1>
+<p>Download SQL backups, export a MySQL table to CSV, edit it in Excel, and upload the edited values back.</p>
+
+<section>
+  <label>API address<input id="api" type="url" placeholder="https://your-backend-address"></label>
+  <button id="load">Load Tables</button>
+</section>
+
+<section>
+  <h2>Download backup</h2>
+  <button id="full">Download Full Backup</button>
+  <button id="structure">Download Structure Only</button>
+  <p class="hint">Full backup includes table definitions and rows. Structure-only contains empty table definitions.</p>
+</section>
+
+<section>
+  <h2>Select tables <small id="count"></small></h2>
+  <label><input id="selectAll" type="checkbox"> Select All</label>
+  <div id="tables">Load tables to select them.</div><br>
+  <button id="data">Download Selected Tables’ SQL Data</button>
+  <button id="clear" class="danger">Clear Selected Tables’ Data</button>
+  <p class="hint">Clearing keeps table structures and current ID counters. Download a backup first.</p>
+</section>
+
+<section>
+  <h2>Edit Existing MySQL Table</h2>
+  <div class="warn"><strong>Direct database editing:</strong> use this only when you understand the table. Invalid foreign-key values are rejected and the upload is rolled back. Primary-key/ID columns are protected and are used only to identify each existing row.</div>
+  <p>Select <strong>exactly one table</strong> above. Current selection: <span id="editTable" class="selected-table">None</span></p>
+  <div class="editor-grid">
+    <div>
+      <button id="csvDownload" class="success">1. Download Selected Table CSV</button>
+      <p class="hint">Open the CSV in Excel, modify the values, then save it again as CSV UTF-8. Do not rename column headings. <code>__NULL__</code> represents a database NULL.</p>
+    </div>
+    <div>
+      <label>2. Choose edited CSV<input id="csvFile" type="file" accept=".csv,text/csv"></label>
+      <button id="csvUpload" class="danger">3. Upload & Update Existing Rows</button>
+    </div>
+  </div>
+  <p class="hint">Upload mode is <strong>UPDATE EXISTING ROWS ONLY</strong>. It does not add new rows and does not delete missing rows.</p>
+</section>
+
 <section id="status" role="status" aria-live="polite">Ready.</section>
-<dialog id="confirm"><h2>Confirm clearing data</h2><p>All rows in the following tables will be deleted. This affects the connected shop database.</p><ul id="confirmTables"></ul><p>Table structures will remain. Have you saved your backup?</p><button id="cancel">Cancel</button><button id="confirmClear" class="danger">Yes, Clear Selected Data</button></dialog>
-</main><script src="textile-config.js"></script><script src="database-backup.js"></script></body></html>
+
+<dialog id="confirm">
+  <h2>Confirm clearing data</h2>
+  <p>All rows in the following tables will be deleted. This affects the connected shop database.</p>
+  <ul id="confirmTables"></ul>
+  <p>Table structures will remain. Have you saved your backup?</p>
+  <button id="cancel">Cancel</button>
+  <button id="confirmClear" class="danger">Yes, Clear Selected Data</button>
+</dialog>
+
+<dialog id="confirmUpload">
+  <h2>Confirm table update</h2>
+  <p>You are about to update existing rows in MySQL table <strong id="uploadTableName"></strong> from the selected CSV.</p>
+  <p>Primary-key values are used to match rows and will not be changed. Any database validation/foreign-key error rolls back the complete upload.</p>
+  <button id="cancelUpload">Cancel</button>
+  <button id="confirmUploadBtn" class="danger">Yes, Update Table</button>
+</dialog>
+</main>
+<script src="textile-config.js"></script>
+<script src="database-backup.js"></script>
+</body>
+</html>
