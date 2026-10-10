@@ -641,11 +641,15 @@ function fillBarcodeEditorMasters(){
     if([...cat.options].some(o=>o.value===old))cat.value=old;
   }
   const material=document.getElementById('barcode_edit_material');
-  if(material){
-    const old=material.value;
-    material.replaceChildren(new Option('-- Select / Blank --',''));
-    (DATA.materials||[]).forEach(m=>material.add(new Option(m.MaterialName,m.MaterialName)));
-    if([...material.options].some(o=>o.value===old))material.value=old;
+  const materialList=document.getElementById('barcode_edit_material_options');
+  if(materialList){
+    const old=material?.value||'';
+    materialList.replaceChildren(...(DATA.materials||[]).map(m=>{
+      const option=document.createElement('option');
+      option.value=m.MaterialName;
+      return option;
+    }));
+    if(material)material.value=old;
   }
   barcodeEditCategoryChanged(false);
 }
@@ -664,8 +668,10 @@ function barcodeEditCategoryChanged(mark=true){
 
 function barcodeEditTierChanged(){
   const tier=(DATA.categoryPriceTiers||[]).find(t=>String(t.CategoryPriceTierID)===val('barcode_edit_tier'));
-  if(tier && !BARCODE_EDIT_DIRTY.has('SellingPrice')){
+  if(tier){
     document.getElementById('barcode_edit_selling').value=Number(tier.SellingPrice||0).toFixed(2);
+    markBarcodeEditDirty('CategoryPriceTierID');
+    markBarcodeEditDirty('SellingPrice');
   }
 }
 
@@ -686,6 +692,7 @@ function clearBarcodeEditor(){
   if(search)search.value='';
   const card=document.getElementById('barcode_edit_card');
   if(card)card.style.display='none';
+  setBarcodeEditorLocked(false,'');
   const list=document.getElementById('barcode_edit_piece_list');
   if(list)list.innerHTML='';
   msg('barcode_edit_search','','');
@@ -698,6 +705,26 @@ function setBarcodeEditorValue(id,value,mixed=false){
   if(!el)return;
   el.value=value==null?'':value;
   el.placeholder=mixed?'Multiple values — type to change all':'';
+}
+
+function setBarcodeEditorLocked(locked,status){
+  const ids=[
+    'barcode_edit_category','barcode_edit_tier','barcode_edit_material','barcode_edit_design',
+    'barcode_edit_colour','barcode_edit_size','barcode_edit_remarks','barcode_edit_purchase',
+    'barcode_edit_selling','barcode_edit_mrp'
+  ];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.disabled=!!locked;
+  });
+  const update=document.getElementById('barcode_edit_update_btn');
+  if(update)update.disabled=!!locked;
+  const statusEl=document.getElementById('barcode_edit_status');
+  if(statusEl){
+    statusEl.value=status||'';
+    statusEl.style.fontWeight='700';
+    statusEl.style.color=status==='AVAILABLE'?'#047857':status==='SOLD'?'#b91c1c':'#92400e';
+  }
 }
 
 function searchBarcodeForEdit(){
@@ -714,9 +741,12 @@ function searchBarcodeForEdit(){
     const d=result.details||{},mixed=new Set(result.mixedFields||[]);
     document.getElementById('barcode_edit_card').style.display='block';
     document.getElementById('barcode_edit_title').textContent=result.mode==='PIECE'?'Edit Piece Barcode '+result.search:'Edit Dress Code '+result.search;
-    document.getElementById('barcode_edit_scope').innerHTML=result.mode==='PIECE'
-      ? 'Only <strong>'+esc(result.search)+'</strong> will be updated.'
-      : 'Changes will apply to <strong>'+Number(result.quantity||0)+'</strong> product(s) under Dress Code <strong>'+esc(result.search)+'</strong>.';
+    const locked=!result.editable;
+    document.getElementById('barcode_edit_scope').innerHTML=locked
+      ? '<strong>'+esc(result.stockStatus||'SOLD')+'</strong> — this '+(result.mode==='PIECE'?'piece':'Dress Code group')+' cannot be edited or updated because sold stock is included.'
+      : (result.mode==='PIECE'
+        ? 'Only <strong>'+esc(result.search)+'</strong> will be updated.'
+        : 'Changes will apply to <strong>'+Number(result.quantity||0)+'</strong> AVAILABLE product(s) under Dress Code <strong>'+esc(result.search)+'</strong>.');
     document.getElementById('barcode_edit_category').value=String(d.CategoryID||'');
     barcodeEditCategoryChanged(false);
     document.getElementById('barcode_edit_tier').value=String(d.CategoryPriceTierID||'');
@@ -729,8 +759,11 @@ function searchBarcodeForEdit(){
     setBarcodeEditorValue('barcode_edit_purchase',d.PurchasePrice,mixed.has('PurchasePrice'));
     setBarcodeEditorValue('barcode_edit_selling',d.SellingPrice,mixed.has('SellingPrice'));
     setBarcodeEditorValue('barcode_edit_mrp',d.MRP,mixed.has('MRP'));
+    setBarcodeEditorLocked(locked,result.stockStatus||'');
     renderBarcodeEditPieces(result.pieces||[]);
-    msg('barcode_edit_search',result.mode==='PIECE'?'Specific piece barcode loaded.':'Dress Code loaded. All pieces in this Dress Code are shown below.','ok');
+    msg('barcode_edit_search',locked
+      ? (result.mode==='PIECE'?'Sold piece loaded. View/reprint only; editing is disabled.':'Dress Code contains sold stock. View/reprint only; editing is disabled.')
+      : (result.mode==='PIECE'?'Available piece loaded.':'Dress Code loaded. All pieces are AVAILABLE.'),locked?'warn':'ok');
     msg('barcode_edit','','');
   }).withFailureHandler(error=>{
     btn.disabled=false;
@@ -751,6 +784,7 @@ function renderBarcodeEditPieces(pieces){
 
 function updateBarcodeDetails(){
   if(!BARCODE_EDIT_RESULT)return msg('barcode_edit','Search a barcode first.','err');
+  if(!BARCODE_EDIT_RESULT.editable)return msg('barcode_edit','SOLD stock cannot be edited or updated.','err');
   if(!BARCODE_EDIT_DIRTY.size)return msg('barcode_edit','No fields were changed.','warn');
   const categoryId=Number(val('barcode_edit_category'));
   const tierId=Number(val('barcode_edit_tier'));
@@ -2637,21 +2671,11 @@ function printSale(saleId) {
           <title>${esc(sale.BillNo || 'Bill')}</title>
 
           <style>
-            @page{
-              size:A5 portrait;
-              margin:8mm;
-            }
-
-            html,body{
-              margin:0;
-              padding:0;
-            }
-
             body{
               font-family:Arial,sans-serif;
+              padding:18px;
               color:#111;
-              font-size:12px;
-              width:100%;
+              font-size:13px;
             }
 
             h2{
@@ -2683,11 +2707,6 @@ function printSale(saleId) {
             }
 
             @media print{
-              html,body{
-                width:100%;
-                margin:0 !important;
-                padding:0 !important;
-              }
               button{display:none}
             }
           </style>

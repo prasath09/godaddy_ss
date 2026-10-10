@@ -694,10 +694,15 @@
               <label>Quantity</label>
               <input id="barcode_edit_qty" readonly>
             </div>
+            <div>
+              <label>Stock Status</label>
+              <input id="barcode_edit_status" readonly>
+            </div>
 
             <div>
               <label>Material (optional)</label>
-              <select id="barcode_edit_material" onchange="markBarcodeEditDirty('Material')"></select>
+              <input id="barcode_edit_material" list="barcode_edit_material_options" placeholder="Select or type material" autocomplete="off" oninput="markBarcodeEditDirty('Material')">
+              <datalist id="barcode_edit_material_options"></datalist>
             </div>
             <div>
               <label>Design / Style (optional)</label>
@@ -1080,7 +1085,7 @@
 </div>
 
 
-<script src="app.js?v=barcode-edit-1"></script>
+<script src="app.js?v=barcode-edit-2"></script>
 
 
 </body>
