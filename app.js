@@ -1026,7 +1026,7 @@ function printNovajetLabels(labels){
   document.body.appendChild(area);
   let sheet;
   labels.forEach((label,index)=>{
-    if(index % 24 === 0){
+    if(index % 21 === 0){
       sheet=document.createElement('div');sheet.className='sticker-sheet';
       area.appendChild(sheet);
     }

@@ -142,7 +142,7 @@ function printGeneratedStickers(pieces){
   const area=document.getElementById("printArea"); area.innerHTML="";
   let sheet;
   pieces.forEach((piece,index)=>{
-    if(index % 24 === 0){
+    if(index % 21 === 0){
       sheet=document.createElement("div"); sheet.className="sticker-sheet";
       area.appendChild(sheet);
     }

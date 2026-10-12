@@ -726,7 +726,7 @@ function printLastGeneratedStickers(){
   document.body.appendChild(area);
   let sheet;
   LAST_GENERATED_PIECES.forEach((piece,index)=>{
-    if(index % 24 === 0){
+    if(index % 21 === 0){
       sheet=document.createElement('div');
       sheet.className='sticker-sheet';
       area.appendChild(sheet);
