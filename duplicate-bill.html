@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Duplicate Bill / Reprint</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root{--bg:#f6f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--border:#e5e7eb;--primary:#111827;--soft:#eef2ff;--ok:#047857;--danger:#b91c1c}
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .shell{max-width:1200px;margin:auto;padding:20px}.top{margin-bottom:16px}h1{margin:0;font-size:24px}h3{margin-top:0}.sub{color:var(--muted);font-size:13px;margin-top:5px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}.search-grid{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+    input{width:100%;padding:13px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:18px}.btn{border:0;border-radius:8px;padding:12px 16px;cursor:pointer;font-weight:700}.btn.primary{background:var(--primary);color:#fff}.btn.secondary{background:var(--soft);color:#1d4ed8}.btn:disabled{opacity:.55;cursor:not-allowed}
+    .msg{font-size:13px;margin-top:10px;min-height:18px}.ok{color:var(--ok)}.err{color:var(--danger)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}th{font-size:11px;color:var(--muted);text-transform:uppercase}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.preview{border:1px solid var(--border);border-radius:10px;background:#fff;padding:18px;min-height:100px}@media(max-width:700px){.search-grid{grid-template-columns:1fr}.search-grid .btn{width:100%}}
+  </style>
+  <script src="textile-config.js"></script>
+  <script src="api-bridge.js"></script>
+</head>
+<body>
+<div class="shell">
+  <div class="top"><h1>Duplicate Bill / Reprint</h1><div class="sub">Search by Customer Mobile Number or Bill / Invoice Number</div></div>
+  <div class="card"><h3>Find Existing Bill</h3><div class="search-grid"><div class="field"><label>Mobile Number / Bill No. *</label><input id="duplicate_search" placeholder="Example: 9876543210 or SS-000125" autocomplete="off" onkeydown="duplicateSearchKey(event)"></div><button id="search_btn" class="btn primary" onclick="searchDuplicateBills()">Search</button></div><div id="msg_search" class="msg"></div></div>
+  <div class="card"><h3>Emergency Manual Bill</h3><div class="sub">Use this only when normal billing is unavailable. It prints a blank A4 bill for handwriting and does not save anything to the database.</div><div class="actions"><button class="btn secondary" onclick="printEmptyBill()">Print Empty Bill</button></div></div>
+  <div id="results_card" class="card" style="display:none"><h3>Matching Bills</h3><div id="duplicate_results" class="table-wrap"></div></div>
+  <div id="preview_card" class="card" style="display:none"><h3>Duplicate Bill Preview</h3><div class="actions"><button class="btn primary" onclick="printCurrentDuplicate()">Print Duplicate Bill</button><button class="btn secondary" onclick="downloadCurrentDuplicate()">Download PDF</button></div><div id="duplicate_preview" class="preview" style="margin-top:14px"></div></div>
+</div>
+<script src="duplicate-bill.js?v=2"></script>
+</body>
+</html>

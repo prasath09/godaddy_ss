@@ -1987,7 +1987,7 @@ function downloadReceiptPDF(data) {
 
   doc.text(
 
-    'SS BRANDED OUTLET',
+    'SS TEXTILE',
 
     pageWidth / 2,
 
@@ -1997,12 +1997,63 @@ function downloadReceiptPDF(data) {
 
   );
 
-  y += 6;
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(9);
-  doc.text('GSTIN: 33NGTPS6785L1ZX', pageWidth / 2, y, {align:'center'});
 
-  y += 8;
+
+  y += 7;
+
+
+
+  doc.setFont(
+
+    'helvetica',
+
+    'normal'
+
+  );
+
+
+
+  doc.setFontSize(10);
+
+
+
+  if (data.locationName) {
+
+    doc.text(
+
+      String(data.locationName),
+
+      pageWidth / 2,
+
+      y,
+
+      {align:'center'}
+
+    );
+
+
+
+    y += 5;
+
+  }
+
+
+
+  doc.text(
+
+    'Sales Bill',
+
+    pageWidth / 2,
+
+    y,
+
+    {align:'center'}
+
+  );
+
+
+
+  y += 7;
 
 
 
@@ -2030,45 +2081,7 @@ function downloadReceiptPDF(data) {
 
   doc.text(
 
-    'Date: ' +
-
-    fmtDate(sale.SaleDate),
-
-    left,
-
-    y
-
-  );
-
-
-
-  doc.text(
-
-    'Customer Name: ' +
-
-    String(
-
-      sale.CustomerName ||
-
-      'Walk-in'
-
-    ),
-
-    112,
-
-    y
-
-  );
-
-
-
-  y += 6;
-
-
-
-  doc.text(
-
-    'Bill No: ' +
+    'Bill: ' +
 
     String(sale.BillNo || ''),
 
@@ -2080,7 +2093,51 @@ function downloadReceiptPDF(data) {
 
 
 
+  doc.text(
+
+    'Date: ' +
+
+    fmtDate(sale.SaleDate),
+
+    right,
+
+    y,
+
+    {align:'right'}
+
+  );
+
+
+
+  y += 6;
+
+
+
+  doc.text(
+
+    'Customer: ' +
+
+    String(
+
+      sale.CustomerName ||
+
+      'Walk-in'
+
+    ),
+
+    left,
+
+    y
+
+  );
+
+
+
   if (sale.CustomerMobile) {
+
+    y += 5;
+
+
 
     doc.text(
 
@@ -2088,7 +2145,7 @@ function downloadReceiptPDF(data) {
 
       String(sale.CustomerMobile),
 
-      112,
+      left,
 
       y
 
@@ -2210,12 +2267,19 @@ function downloadReceiptPDF(data) {
 
 
 
-    const rawCode = String(i.Barcode || '').trim();
-    const category = String(i.CategoryName || '').trim().toUpperCase();
-    const cleanCode = rawCode.includes('/') ? rawCode.split('/').pop() : rawCode;
-    const itemName = category && cleanCode
-      ? category + '/' + cleanCode
-      : (rawCode || category);
+    const itemName =
+
+      String(
+
+        (i.CategoryName || '') +
+
+        ' / ' +
+
+        (i.TierName || '')
+
+      );
+
+
 
     const itemLines =
 
@@ -2287,8 +2351,43 @@ function downloadReceiptPDF(data) {
 
 
 
-    const nameHeight = Math.max(itemLines.length * 4, 4);
-    y += nameHeight + 2;
+    const nameHeight =
+
+      Math.max(
+
+        itemLines.length * 4,
+
+        4
+
+      );
+
+
+
+    y += nameHeight;
+
+
+
+    doc.setFontSize(8);
+
+
+
+    doc.text(
+
+      String(i.Barcode || ''),
+
+      left,
+
+      y
+
+    );
+
+
+
+    doc.setFontSize(10);
+
+
+
+    y += 6;
 
   });
 
@@ -2629,7 +2728,21 @@ function buildReceiptHtml(data) {
         <tr>
 
           <td>
-            ${esc((String(i.CategoryName || '').toUpperCase()) + '/' + (String(i.Barcode || '').includes('/') ? String(i.Barcode || '').split('/').pop() : String(i.Barcode || '')))}
+
+            ${esc(i.CategoryName)}
+
+            /
+
+            ${esc(i.TierName)}
+
+            <br>
+
+            <small>
+
+              ${esc(i.Barcode)}
+
+            </small>
+
           </td>
 
 
@@ -2740,19 +2853,6 @@ function buildReceiptHtml(data) {
 
         }
 
-        .bill-info-grid{
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          column-gap:40px;
-          row-gap:10px;
-          margin-top:12px;
-          margin-bottom:12px;
-        }
-
-        .bill-info-grid > div:nth-child(even){
-          text-align:left;
-        }
-
 
 
         table{
@@ -2807,19 +2907,81 @@ function buildReceiptHtml(data) {
 
 
 
-      <h2>SS BRANDED OUTLET</h2>
-      <div class="center">GSTIN: 33NGTPS6785L1ZX</div>
+      <h2>SS TEXTILE</h2>
+
+
+
+      <div class="center">
+
+        ${esc(data.locationName || '')}
+
+      </div>
+
+
+
+      <div class="center">
+
+        Sales Bill
+
+      </div>
+
+
 
       <hr>
 
 
 
-      <div class="bill-info-grid">
-        <div><strong>Date:</strong> ${esc(fmtDate(sale.SaleDate))}</div>
-        <div><strong>Customer Name:</strong> ${esc(sale.CustomerName || 'Walk-in')}</div>
-        <div><strong>Bill No:</strong> ${esc(sale.BillNo || '')}</div>
-        <div><strong>Mobile:</strong> ${esc(sale.CustomerMobile || '')}</div>
+      <div>
+
+        <strong>Bill:</strong>
+
+        ${esc(sale.BillNo || '')}
+
       </div>
+
+
+
+      <div>
+
+        <strong>Date:</strong>
+
+        ${esc(fmtDate(sale.SaleDate))}
+
+      </div>
+
+
+
+      <div>
+
+        <strong>Customer:</strong>
+
+        ${esc(sale.CustomerName || 'Walk-in')}
+
+      </div>
+
+
+
+      ${
+
+        sale.CustomerMobile
+
+          ? `
+
+            <div>
+
+              <strong>Mobile:</strong>
+
+              ${esc(sale.CustomerMobile)}
+
+            </div>
+
+          `
+
+          : ''
+
+      }
+
+
 
       <table>
 
