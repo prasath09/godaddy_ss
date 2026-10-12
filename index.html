@@ -698,6 +698,15 @@
               <input id="barcode_edit_qty" readonly>
             </div>
             <div>
+              <label>Vendor *</label>
+              <input id="barcode_edit_vendor" list="barcode_edit_vendor_options" placeholder="Select or type vendor name" autocomplete="off" oninput="markBarcodeEditDirty('VendorID')">
+              <datalist id="barcode_edit_vendor_options"></datalist>
+            </div>
+            <div>
+              <label>Supplier Invoice No. *</label>
+              <input id="barcode_edit_invoice" oninput="markBarcodeEditDirty('InvoiceNo')">
+            </div>
+            <div>
               <label>Stock Status</label>
               <input id="barcode_edit_status" readonly>
             </div>
@@ -1088,7 +1097,7 @@
 </div>
 
 
-<script src="app.js?v=mrp-optional-1"></script>
+<script src="app.js?v=vendor-invoice-edit-1"></script>
 
 
 </body>

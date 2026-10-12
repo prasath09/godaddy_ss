@@ -1,6 +1,6 @@
 const VendorEntry = {
   rows: [],
-  ids: ['pur_vendor','purchase_vendor_display','vendor_name','reprint_vendor'],
+  ids: ['pur_vendor','purchase_vendor_display','vendor_name','reprint_vendor','barcode_edit_vendor'],
   fill(rows){
     this.rows=rows||[];
     this.ids.forEach(id=>{
@@ -640,6 +640,17 @@ function fillBarcodeEditorMasters(){
     (DATA.categories||[]).forEach(c=>cat.add(new Option(c.CategoryName,c.CategoryID)));
     if([...cat.options].some(o=>o.value===old))cat.value=old;
   }
+  const vendor=document.getElementById('barcode_edit_vendor');
+  const vendorList=document.getElementById('barcode_edit_vendor_options');
+  if(vendorList){
+    const old=vendor?.value||'';
+    vendorList.replaceChildren(...(DATA.vendors||[]).map(v=>{
+      const option=document.createElement('option');
+      option.value=v.VendorName;
+      return option;
+    }));
+    if(vendor)vendor.value=old;
+  }
   const material=document.getElementById('barcode_edit_material');
   const materialList=document.getElementById('barcode_edit_material_options');
   if(materialList){
@@ -709,7 +720,7 @@ function setBarcodeEditorValue(id,value,mixed=false){
 
 function setBarcodeEditorLocked(locked,status){
   const ids=[
-    'barcode_edit_category','barcode_edit_tier','barcode_edit_material','barcode_edit_design',
+    'barcode_edit_category','barcode_edit_tier','barcode_edit_vendor','barcode_edit_invoice','barcode_edit_material','barcode_edit_design',
     'barcode_edit_colour','barcode_edit_size','barcode_edit_remarks','barcode_edit_purchase',
     'barcode_edit_selling','barcode_edit_mrp'
   ];
@@ -751,6 +762,8 @@ function searchBarcodeForEdit(){
     barcodeEditCategoryChanged(false);
     document.getElementById('barcode_edit_tier').value=String(d.CategoryPriceTierID||'');
     document.getElementById('barcode_edit_qty').value=Number(result.quantity||0);
+    setBarcodeEditorValue('barcode_edit_vendor',d.VendorName||'',mixed.has('VendorID'));
+    setBarcodeEditorValue('barcode_edit_invoice',d.InvoiceNo||'',mixed.has('InvoiceNo'));
     setBarcodeEditorValue('barcode_edit_material',d.Material||'',mixed.has('Material'));
     setBarcodeEditorValue('barcode_edit_design',d.Design||'',mixed.has('Design'));
     setBarcodeEditorValue('barcode_edit_colour',d.Colour||'',mixed.has('Colour'));
@@ -777,8 +790,8 @@ function renderBarcodeEditPieces(pieces){
   const el=document.getElementById('barcode_edit_piece_list');
   if(!el)return;
   if(!pieces.length){el.innerHTML='';return;}
-  el.innerHTML='<table><thead><tr><th>Piece Barcode</th><th>Status</th><th>Category</th><th>Tier Code</th><th>Selling</th></tr></thead><tbody>'+
-    pieces.map(p=>'<tr><td><strong>'+esc(p.PieceBarcode)+'</strong></td><td>'+esc(p.Status)+'</td><td>'+esc(p.CategoryName||'')+'</td><td>'+esc(p.TierCode||'')+'</td><td>'+money(p.SellingPrice)+'</td></tr>').join('')+
+  el.innerHTML='<table><thead><tr><th>Piece Barcode</th><th>Status</th><th>Vendor</th><th>Invoice No.</th><th>Category</th><th>Tier Code</th><th>Selling</th></tr></thead><tbody>'+
+    pieces.map(p=>'<tr><td><strong>'+esc(p.PieceBarcode)+'</strong></td><td>'+esc(p.Status)+'</td><td>'+esc(p.VendorName||'')+'</td><td>'+esc(p.InvoiceNo||'')+'</td><td>'+esc(p.CategoryName||'')+'</td><td>'+esc(p.TierCode||'')+'</td><td>'+money(p.SellingPrice)+'</td></tr>').join('')+
     '</tbody></table>';
 }
 
@@ -791,6 +804,7 @@ function updateBarcodeDetails(){
   if(!categoryId||!tierId)return msg('barcode_edit','Select Category and Tier Code.','err');
   const payload={Search:BARCODE_EDIT_RESULT.search,Mode:BARCODE_EDIT_RESULT.mode,CategoryID:categoryId,CategoryPriceTierID:tierId,ChangedFields:[...BARCODE_EDIT_DIRTY]};
   const values={
+    VendorID:val('barcode_edit_vendor'),VendorName:VendorEntry.name('barcode_edit_vendor'),InvoiceNo:val('barcode_edit_invoice'),
     PurchasePrice:val('barcode_edit_purchase'),SellingPrice:val('barcode_edit_selling'),MRP:val('barcode_edit_mrp'),
     Material:val('barcode_edit_material'),Design:val('barcode_edit_design'),Colour:val('barcode_edit_colour'),Size:val('barcode_edit_size'),Remarks:val('barcode_edit_remarks')
   };
