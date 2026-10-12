@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Price Barcode Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <style>
+    :root{
+      --bg:#f6f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;
+      --border:#e5e7eb;--primary:#111827;--soft:#eef2ff;--accent:#2563eb;
+      --ok:#047857;--danger:#b91c1c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .shell{max-width:980px;margin:auto;padding:20px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    h1{margin:0;font-size:24px}.sub{color:var(--muted);font-size:13px;margin-top:5px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+    input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:18px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .btn{border:0;border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:700}
+    .btn.primary{background:var(--primary);color:#fff}.btn.secondary{background:var(--soft);color:#1d4ed8}
+    .msg{font-size:13px;margin-top:10px;min-height:18px}.ok{color:var(--ok)}.err{color:var(--danger)}
+    .preview-wrap{display:flex;justify-content:center;padding:14px 0}
+    .preview-label{width:63.5mm;height:38mm;background:#fff;color:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:1px dashed #9ca3af;padding:2mm 3mm}
+    .label-heading{display:flex;align-items:baseline;justify-content:center;gap:3mm;width:100%;font-size:16px;margin-bottom:1mm}
+    .label-heading strong{font-size:19px;font-weight:700}
+    .barcode-svg{display:block;width:58mm;max-width:100%;height:16mm;flex-shrink:0}
+    .label-bottom{display:flex;justify-content:center;align-items:center;width:100%;margin:1mm auto 0;font:12px Arial,sans-serif;white-space:nowrap}
+    .label-code{font-weight:700;text-align:center}
+    .note{padding:10px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px}
+    #printArea{display:none}
+    .sticker-sheet{display:grid;width:196.5mm;height:266mm;grid-template-columns:repeat(3,63.5mm);grid-template-rows:repeat(7,38mm);column-gap:3mm;row-gap:0;align-content:start}
+    .barcode-label{box-sizing:border-box;width:63.5mm;height:38mm;padding:2mm 3mm;border:0;text-align:center;background:#fff;color:#000;overflow:hidden;break-inside:avoid;display:flex;flex-direction:column;align-items:center;justify-content:center;font:9px/1.15 Arial,sans-serif}
+    @page{size:A4 portrait;margin:12.5mm 6mm}
+    @media print{
+      html,body{margin:0!important;padding:0!important;background:#fff!important;min-width:0!important}
+      body > :not(#printArea){display:none!important}
+      #printArea{display:block!important;width:196.5mm;margin:0!important;padding:0!important;position:static!important}
+      .sticker-sheet{break-inside:avoid;page-break-inside:avoid;break-after:page;page-break-after:always}
+      .sticker-sheet:last-child{break-after:auto;page-break-after:auto}
+      .barcode-label{margin:0;box-shadow:none}
+    }
+    @media(max-width:680px){.form-grid{grid-template-columns:1fr}.shell{padding:12px}.preview-wrap{overflow:auto;justify-content:flex-start}}
+  </style>
+  <script src="textile-config.js"></script>
+  <script src="api-bridge.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <div class="top">
+      <div>
+        <h1>Price Barcode Generator</h1>
+        <div class="sub">Enter amount → generate Code 128 barcode → print price stickers</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="form-grid">
+        <div>
+          <label>Amount (₹) *</label>
+          <input id="price_amount" type="number" min="0.01" step="0.01" placeholder="Example: 499" autocomplete="off">
+        </div>
+        <div>
+          <label>Sticker Quantity *</label>
+          <input id="price_qty" type="number" min="1" max="500" step="1" value="1">
+        </div>
+      </div>
+      <div class="actions">
+        <button id="generate_btn" class="btn primary" type="button">Generate Preview</button>
+        <button id="print_btn" class="btn secondary" type="button" disabled>Print Stickers</button>
+      </div>
+      <div id="msg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="note">Barcode value is generated automatically from the amount. Example: ₹499 → <strong>P499</strong>. Whole amounts print without decimals; decimal amounts retain two decimals.</div>
+      <div class="preview-wrap">
+        <div class="preview-label" aria-label="Price barcode label preview">
+          <div class="label-heading"><span>SS</span><strong id="preview_price">₹499</strong></div>
+          <svg id="preview_barcode" class="barcode-svg"></svg>
+          <div class="label-bottom"><span id="preview_code" class="label-code">P499</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="printArea"></div>
+  <script src="price-barcode.js"></script>
+</body>
+</html>
