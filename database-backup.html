@@ -12,7 +12,14 @@
 <main>
 <div id="admin">
   <div class="top"><div><h1>Database Backup & Online Table Editor</h1><div class="muted">GoDaddy Hosted MySQL · Direct browser editor</div></div></div>
-  <section><label>Backend API address</label><input id="api" type="url" placeholder="https://your-backend-address"><div class="muted" style="margin-top:8px">No separate admin token/password is required.</div></section>
+  <section>
+    <label>Backend API address</label>
+    <div class="toolbar" style="align-items:center">
+      <div style="flex:1;min-width:320px"><input id="api" type="url" placeholder="https://your-backend-address" value="https://zcypn1azem.c39.airoapp.ai"></div>
+      <div style="flex:0 0 auto;min-width:auto"><button id="connectDb" class="success">Connect Database</button></div>
+    </div>
+    <div id="connectionStatus" class="muted" style="margin-top:8px">Enter/confirm the Node backend address, then click <strong>Connect Database</strong>. Tables will load only after the connection succeeds.</div>
+  </section>
 
   <section>
     <div class="toolbar">

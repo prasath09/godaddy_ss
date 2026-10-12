@@ -1,5 +1,5 @@
 const el=id=>document.getElementById(id);
-let TABLES=[],CURRENT=null,OFFSET=0,ROW_MODE='',ROW_SOURCE=null,PENDING_DELETE=null;
+let TABLES=[],CURRENT=null,OFFSET=0,ROW_MODE='',ROW_SOURCE=null,PENDING_DELETE=null,CONNECTED=false;
 const status=t=>el('status').textContent=t;
 
 function base(){
@@ -23,7 +23,54 @@ function currentMeta(){return TABLES.find(t=>t.name===el('tableSelect').value)||
 function keyOf(row,meta){return Object.fromEntries((meta.primaryKey||[]).map(k=>[k,row[k]]));}
 
 
+async function loadTables(){
+  status('Connecting to database...');
+  el('connectionStatus').textContent='Checking backend and database connection...';
+  const result=await (await api('tables')).json();
+  TABLES=Array.isArray(result.tables)?result.tables:[];
+  const select=el('tableSelect');
+  const previous=select.value;
+  select.replaceChildren(new Option('Select table',''));
+  for(const table of TABLES){
+    const label=table.name+(Number.isFinite(Number(table.rows))?' ('+Number(table.rows)+' rows)':'');
+    select.add(new Option(label,table.name));
+  }
+  if(TABLES.some(t=>t.name===previous))select.value=previous;
+
+  const boxes=el('tables');
+  boxes.replaceChildren(...TABLES.map(table=>{
+    const label=document.createElement('label');
+    const box=document.createElement('input');
+    box.type='checkbox';box.value=table.name;box.style.width='auto';
+    label.append(box,document.createTextNode(' '+table.name+(Number.isFinite(Number(table.rows))?' ('+Number(table.rows)+')':'')));
+    return label;
+  }));
+
+  CONNECTED=true;
+  sessionStorage.setItem('dbAdminApi',base());
+  el('connectionStatus').innerHTML='<span class="ok"><strong>Connected successfully.</strong> '+TABLES.length+' table(s) loaded.</span>';
+  status('Database connected. Select a table to view or edit rows.');
+  el('refreshTable').disabled=false;
+  el('addRow').disabled=false;
+  return result;
+}
+
+async function connectDatabase(){
+  CONNECTED=false;
+  el('tableSelect').replaceChildren(new Option('Select table',''));
+  el('tables').replaceChildren();
+  el('rowTable').textContent='Connect to the database, then select a table.';
+  el('tableInfo').textContent='';
+  try{
+    await loadTables();
+  }catch(e){
+    el('connectionStatus').innerHTML='<span style="color:#b42318"><strong>Connection failed:</strong> '+esc(e.message||String(e))+'</span>';
+    throw e;
+  }
+}
+
 async function loadRows(reset=false){
+  if(!CONNECTED)throw Error('Click Connect Database first.');
   const table=el('tableSelect').value;if(!table){CURRENT=null;el('rowTable').textContent='Select a table.';return;}
   if(reset)OFFSET=0;
   const limit=Number(el('pageSize').value||50);
@@ -94,9 +141,15 @@ async function uploadCsv(){const t=el('tableSelect').value,f=el('csvFile').files
 function askClear(){const t=selectedTables();if(!t.length)return status('Select at least one table to clear.');el('clearList').innerHTML=t.map(x=>'<li>'+esc(x)+'</li>').join('');el('clearDialog').showModal();}
 async function clearTables(){const tables=selectedTables();const x=await (await api('clear',{method:'POST',body:{tables,confirmation:'CLEAR SELECTED DATA'}})).json();el('clearDialog').close();status('Tables cleared:\n'+Object.entries(x.deleted).map(([k,v])=>k+': '+v).join('\n'));await loadTables();}
 
-el('tableSelect').onchange=()=>run(()=>loadRows(true));el('refreshTable').onclick=()=>run(()=>loadRows(false));el('pageSize').onchange=()=>run(()=>loadRows(true));el('addRow').onclick=()=>openRow('add',{});el('saveRow').onclick=()=>run(saveRow);el('cancelRow').onclick=()=>el('rowDialog').close();el('confirmDelete').onclick=()=>run(deleteRow);el('cancelDelete').onclick=()=>el('deleteDialog').close();
+el('connectDb').onclick=()=>run(connectDatabase);
+el('api').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();run(connectDatabase);}});
+el('tableSelect').onchange=()=>run(()=>loadRows(true));el('refreshTable').onclick=()=>run(()=>loadRows(false));el('pageSize').onchange=()=>{if(CONNECTED)run(()=>loadRows(true));};el('addRow').onclick=()=>{if(!CONNECTED)return status('Click Connect Database first.');openRow('add',{});};el('saveRow').onclick=()=>run(saveRow);el('cancelRow').onclick=()=>el('rowDialog').close();el('confirmDelete').onclick=()=>run(deleteRow);el('cancelDelete').onclick=()=>el('deleteDialog').close();
 el('prev').onclick=()=>run(()=>{OFFSET=Math.max(0,OFFSET-Number(el('pageSize').value));return loadRows(false);});el('next').onclick=()=>run(()=>{OFFSET+=Number(el('pageSize').value);return loadRows(false);});
 el('runSql').onclick=()=>run(runSql);el('full').onclick=()=>run(()=>download('full'));el('structure').onclick=()=>run(()=>download('structure'));el('data').onclick=()=>run(()=>download('data'));el('csvDownload').onclick=()=>run(downloadCsv);el('csvUpload').onclick=()=>run(uploadCsv);el('clear').onclick=askClear;el('confirmClear').onclick=()=>run(clearTables);el('cancelClear').onclick=()=>el('clearDialog').close();el('selectAll').onchange=()=>document.querySelectorAll('#tables input').forEach(x=>x.checked=el('selectAll').checked);
 
-const cfg=window.TEXTILE_CONFIG||{};el('api').value=sessionStorage.getItem('dbAdminApi')||cfg.API_BASE_URL||cfg.apiBaseUrl||cfg.API_URL||(location.protocol.startsWith('http')?location.origin:'');
-loadTables().catch(e=>status(e.message||String(e)));
+const cfg=window.TEXTILE_CONFIG||{};
+el('api').value=sessionStorage.getItem('dbAdminApi')||'https://zcypn1azem.c39.airoapp.ai'||cfg.API_BASE_URL||cfg.apiBaseUrl||cfg.API_URL||'';
+el('refreshTable').disabled=true;
+el('addRow').disabled=true;
+el('rowTable').textContent='Click Connect Database above. After confirmation, the table list will load here.';
+status('Ready. Click Connect Database.');
