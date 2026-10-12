@@ -730,6 +730,8 @@ function setBarcodeEditorLocked(locked,status){
   });
   const update=document.getElementById('barcode_edit_update_btn');
   if(update)update.disabled=!!locked;
+  const del=document.getElementById('barcode_edit_delete_btn');
+  if(del)del.disabled=!!locked;
   const statusEl=document.getElementById('barcode_edit_status');
   if(statusEl){
     statusEl.value=status||'';
@@ -821,6 +823,39 @@ function updateBarcodeDetails(){
     btn.disabled=false;
     msg('barcode_edit',error.message||String(error),'err');
   }).updateBarcodeDetails(payload);
+}
+
+function deleteBarcodeProduct(){
+  if(!BARCODE_EDIT_RESULT)return msg('barcode_edit','Search a barcode first.','err');
+  if(!BARCODE_EDIT_RESULT.editable)return msg('barcode_edit','SOLD/non-available stock cannot be deleted.','err');
+
+  const mode=BARCODE_EDIT_RESULT.mode;
+  const search=BARCODE_EDIT_RESULT.search;
+  const qty=Number(BARCODE_EDIT_RESULT.quantity||0);
+  const text=mode==='PIECE'
+    ? `Delete product ${search}? This will permanently remove this AVAILABLE piece from stock. This cannot be undone.`
+    : `Delete ALL ${qty} AVAILABLE product(s) under Dress Code ${search}? This will permanently remove every piece under this Dress Code. This cannot be undone.`;
+
+  if(!window.confirm(text))return;
+
+  const btn=document.getElementById('barcode_edit_delete_btn');
+  if(btn)btn.disabled=true;
+  msg('barcode_edit','Deleting product record(s)...','');
+
+  google.script.run.withSuccessHandler(res=>{
+    msg('barcode_edit',res.message,'ok');
+    BARCODE_EDIT_RESULT=null;
+    BARCODE_EDIT_DIRTY=new Set();
+    const card=document.getElementById('barcode_edit_card');
+    if(card)card.style.display='none';
+    const searchBox=document.getElementById('barcode_edit_search');
+    if(searchBox)searchBox.value='';
+    loadAll();
+    setTimeout(()=>searchBox?.focus(),150);
+  }).withFailureHandler(error=>{
+    if(btn)btn.disabled=false;
+    msg('barcode_edit',error.message||String(error),'err');
+  }).deleteBarcodeProduct(search,mode);
 }
 
 function reprintBarcodeEditor(){
