@@ -3,73 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Database Backup & Table Editor</title>
+<title>Database Admin</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#17212b;font:15px Arial,sans-serif}main{max-width:980px;margin:36px auto;padding:24px}section{background:white;border:1px solid #dce2e8;border-radius:12px;padding:22px;margin:18px 0}h1{margin:0 0 8px}p{line-height:1.5;color:#506070}label{display:block;margin:12px 0}input[type=url],input[type=password],input[type=file]{width:100%;padding:11px;border:1px solid #bac5d0;border-radius:6px;background:white}button{padding:12px 16px;border:0;border-radius:6px;background:#173d66;color:white;cursor:pointer;margin:5px 5px 5px 0;font-weight:bold}button:disabled{opacity:.45;cursor:wait}.danger{background:#b42318}.success{background:#067647}#tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:5px}#tables label{margin:0;padding:10px;border:1px solid #e4e9ed;border-radius:6px}#status{white-space:pre-wrap;line-height:1.5}dialog{max-width:620px;width:90%;border:1px solid #bfcbd6;border-radius:12px;padding:24px}dialog::backdrop{background:#0007}#confirmTables{max-height:200px;overflow:auto;line-height:1.7}.hint{font-size:13px}.warn{padding:12px;border:1px solid #f5c26b;background:#fff8e6;border-radius:8px;color:#7a4b00}.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end}.selected-table{font-weight:700;color:#173d66}@media(max-width:700px){.editor-grid{grid-template-columns:1fr}}a{color:#173d66}
+*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#17212b;font:14px Arial,sans-serif}main{max-width:1500px;margin:24px auto;padding:18px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}h1{margin:0 0 6px}h2{margin-top:0}section{background:#fff;border:1px solid #dce2e8;border-radius:12px;padding:18px;margin:14px 0}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;margin:6px 0;font-weight:600}input,select,textarea{width:100%;padding:10px;border:1px solid #bac5d0;border-radius:6px;background:#fff}textarea{min-height:110px;font-family:Consolas,monospace}button{padding:10px 14px;border:0;border-radius:7px;background:#173d66;color:#fff;cursor:pointer;margin:4px 5px 4px 0;font-weight:700}button:disabled{opacity:.45;cursor:wait}.danger{background:#b42318}.success{background:#067647}.secondary{background:#475467}.warn{background:#fff8e6;border:1px solid #f5c26b;color:#7a4b00;padding:10px;border-radius:7px}.ok{color:#067647}.muted{color:#667085}.status{white-space:pre-wrap;line-height:1.5}.table-wrap{overflow:auto;max-height:600px;border:1px solid #e4e9ed;border-radius:8px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid #e4e9ed;border-right:1px solid #f0f2f4;white-space:nowrap;text-align:left;vertical-align:top}th{position:sticky;top:0;background:#f8fafc;z-index:2}.actions-cell{position:sticky;right:0;background:#fff;min-width:150px}.pk{background:#fff8e6}.toolbar{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.toolbar>div{min-width:180px;flex:1}.badge{display:inline-block;background:#eef4ff;color:#1849a9;border-radius:999px;padding:3px 8px;font-size:11px}.hidden{display:none!important}dialog{width:min(900px,94vw);max-height:90vh;overflow:auto;border:1px solid #bfcbd6;border-radius:12px;padding:20px}dialog::backdrop{background:#0008}.form-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field small{display:block;color:#667085;margin-top:3px}.pager{display:flex;justify-content:space-between;align-items:center;margin-top:10px}.sql-result{max-height:350px}.login{max-width:700px;margin:50px auto}.checkboxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:5px}.checkboxes label{font-weight:400;margin:0;padding:8px;border:1px solid #e4e9ed;border-radius:6px}@media(max-width:900px){.grid,.two,.form-list{grid-template-columns:1fr}.actions-cell{position:static}}
 </style>
 </head>
 <body>
 <main>
-<a href="index.html">← Back to shop</a>
-<h1>Database Backup & Table Editor</h1>
-<p>Download SQL backups, export a MySQL table to CSV, edit it in Excel, and upload the edited values back.</p>
+<div id="admin">
+  <div class="top"><div><h1>Database Backup & Online Table Editor</h1><div class="muted">GoDaddy Hosted MySQL · Direct browser editor</div></div></div>
+  <section><label>Backend API address</label><input id="api" type="url" placeholder="https://your-backend-address"><div class="muted" style="margin-top:8px">No separate admin token/password is required.</div></section>
 
-<section>
-  <label>API address<input id="api" type="url" placeholder="https://your-backend-address"></label>
-  <button id="load">Load Tables</button>
-</section>
-
-<section>
-  <h2>Download backup</h2>
-  <button id="full">Download Full Backup</button>
-  <button id="structure">Download Structure Only</button>
-  <p class="hint">Full backup includes table definitions and rows. Structure-only contains empty table definitions.</p>
-</section>
-
-<section>
-  <h2>Select tables <small id="count"></small></h2>
-  <label><input id="selectAll" type="checkbox"> Select All</label>
-  <div id="tables">Load tables to select them.</div><br>
-  <button id="data">Download Selected Tables’ SQL Data</button>
-  <button id="clear" class="danger">Clear Selected Tables’ Data</button>
-  <p class="hint">Clearing keeps table structures and current ID counters. Download a backup first.</p>
-</section>
-
-<section>
-  <h2>Edit Existing MySQL Table</h2>
-  <div class="warn"><strong>Direct database editing:</strong> use this only when you understand the table. Invalid foreign-key values are rejected and the upload is rolled back. Primary-key/ID columns are protected and are used only to identify each existing row.</div>
-  <p>Select <strong>exactly one table</strong> above. Current selection: <span id="editTable" class="selected-table">None</span></p>
-  <div class="editor-grid">
-    <div>
-      <button id="csvDownload" class="success">1. Download Selected Table CSV</button>
-      <p class="hint">Open the CSV in Excel, modify the values, then save it again as CSV UTF-8. Do not rename column headings. <code>__NULL__</code> represents a database NULL.</p>
+  <section>
+    <div class="toolbar">
+      <div><label>Table</label><select id="tableSelect"><option value="">Select table</option></select></div>
+      <div><label>Rows per page</label><select id="pageSize"><option>25</option><option selected>50</option><option>100</option><option>200</option></select></div>
+      <div><button id="refreshTable">Load / Refresh</button><button id="addRow" class="success">Add Row</button></div>
     </div>
-    <div>
-      <label>2. Choose edited CSV<input id="csvFile" type="file" accept=".csv,text/csv"></label>
-      <button id="csvUpload" class="danger">3. Upload & Update Existing Rows</button>
+    <div id="tableInfo" class="muted" style="margin:10px 0"></div>
+    <div id="rowTable" class="table-wrap">Select a table.</div>
+    <div class="pager"><button id="prev" class="secondary">Previous</button><span id="pageText"></span><button id="next" class="secondary">Next</button></div>
+  </section>
+
+  <section>
+    <h2>Read-only SQL Console</h2>
+    <div class="warn">Allowed only: SELECT, SHOW, DESCRIBE/DESC and EXPLAIN. INSERT/UPDATE/DELETE/DROP/ALTER are blocked here. Use the row editor above for changes.</div>
+    <textarea id="sql" placeholder="SELECT * FROM inventory_units LIMIT 50"></textarea>
+    <button id="runSql">Run Query</button>
+    <div id="sqlResult" class="table-wrap sql-result"></div>
+  </section>
+
+  <section>
+    <h2>Backup / CSV Tools</h2>
+    <div class="two">
+      <div>
+        <button id="full">Download Full SQL Backup</button>
+        <button id="structure" class="secondary">Download Structure Only</button>
+        <button id="csvDownload" class="success">Download Current Table CSV</button>
+      </div>
+      <div>
+        <label>Update existing rows from CSV</label>
+        <input id="csvFile" type="file" accept=".csv,text/csv">
+        <button id="csvUpload">Upload CSV Update</button>
+      </div>
     </div>
-  </div>
-  <p class="hint">Upload mode is <strong>UPDATE EXISTING ROWS ONLY</strong>. It does not add new rows and does not delete missing rows.</p>
-</section>
+  </section>
 
-<section id="status" role="status" aria-live="polite">Ready.</section>
+  <section>
+    <h2>Advanced: Selected Table SQL Data / Clear Tables</h2>
+    <div class="warn">Clearing tables is destructive. Download a full backup first.</div>
+    <label><input id="selectAll" type="checkbox" style="width:auto"> Select All</label>
+    <div id="tables" class="checkboxes"></div>
+    <button id="data">Download Selected Tables SQL Data</button>
+    <button id="clear" class="danger">Clear Selected Tables</button>
+  </section>
 
-<dialog id="confirm">
-  <h2>Confirm clearing data</h2>
-  <p>All rows in the following tables will be deleted. This affects the connected shop database.</p>
-  <ul id="confirmTables"></ul>
-  <p>Table structures will remain. Have you saved your backup?</p>
-  <button id="cancel">Cancel</button>
-  <button id="confirmClear" class="danger">Yes, Clear Selected Data</button>
-</dialog>
+  <section id="status" class="status">Ready.</section>
+</div>
 
-<dialog id="confirmUpload">
-  <h2>Confirm table update</h2>
-  <p>You are about to update existing rows in MySQL table <strong id="uploadTableName"></strong> from the selected CSV.</p>
-  <p>Primary-key values are used to match rows and will not be changed. Any database validation/foreign-key error rolls back the complete upload.</p>
-  <button id="cancelUpload">Cancel</button>
-  <button id="confirmUploadBtn" class="danger">Yes, Update Table</button>
-</dialog>
+<dialog id="rowDialog"><h2 id="rowDialogTitle">Edit Row</h2><div id="rowFields" class="form-list"></div><div style="margin-top:14px"><button id="saveRow" class="success">Save</button><button id="cancelRow" class="secondary">Cancel</button></div></dialog>
+<dialog id="deleteDialog"><h2>Confirm row deletion</h2><p id="deleteText"></p><div class="warn">This deletes the selected database row. Foreign-key protection may reject the deletion if other records depend on it.</div><button id="confirmDelete" class="danger">Yes, Delete Row</button><button id="cancelDelete" class="secondary">Cancel</button></dialog>
+<dialog id="clearDialog"><h2>Confirm clearing tables</h2><p>All rows in these tables will be deleted:</p><ul id="clearList"></ul><button id="confirmClear" class="danger">Yes, Clear Selected Data</button><button id="cancelClear" class="secondary">Cancel</button></dialog>
 </main>
 <script src="textile-config.js"></script>
 <script src="database-backup.js"></script>
