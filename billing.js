@@ -142,6 +142,13 @@ function fmtDate(value) {
 
 
 
+function fmtBarcodeDate(value) {
+  if (!value) return '';
+  const raw=String(value).slice(0,10);
+  const m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : fmtDate(value);
+}
+
 function indexBy(arr,key) {
 
   const map = {};
@@ -227,181 +234,62 @@ function compactPieceList(pieces) {
 
 
 function posSearchKey(e) {
-
   if (e.key !== 'Enter') return;
-
-
-
   e.preventDefault();
 
-
-
   const raw = val('pos_search').toUpperCase();
-
-
-
   if (!raw || SCAN_BUSY) return;
 
-
-
   SCAN_BUSY = true;
-
-
-
-  const input =
-
-    document.getElementById('pos_search');
-
-
-
+  const input = document.getElementById('pos_search');
   input.disabled = true;
-
-
-
-  const status =
-
-    document.getElementById('catalog_status');
-
-
-
-  status.textContent =
-
-    'Finding ' + raw + '...';
-
-
-
-  msg(
-
-    'Looking up exact piece...',
-
-    ''
-
-  );
-
-
+  const status = document.getElementById('catalog_status');
+  status.textContent = 'Finding ' + raw + '...';
+  msg('Checking barcode / dress-code availability...', '');
 
   google.script.run
-
     .withSuccessHandler(res => {
-
       SCAN_BUSY = false;
-
       input.disabled = false;
-
       input.value = '';
 
-
-
-      if (
-
-        !res ||
-
-        !res.ok ||
-
-        !res.item
-
-      ) {
-
-        status.textContent =
-
-          'Ready to scan';
-
-
-
-        msg(
-
-          (res && res.message) ||
-
-          'Piece barcode not found.',
-
-          'err'
-
-        );
-
-
-
+      if (!res || !res.ok || !res.item) {
+        status.textContent = 'Ready to scan';
+        msg((res && res.message) || 'Barcode / Dress Code not found.', 'err');
         focusScanner();
-
         return;
-
       }
 
+      addToPOSCart(res.item, res.scannedBarcode);
 
-
-      addToPOSCart(
-
-        res.item,
-
-        res.scannedBarcode
-
-      );
-
-
-
-      if (res.lookupType === 'TIER') {
-
+      if (res.lookupType === 'DRESS_CODE_QTY') {
         msg(
-
-          res.scannedBarcode +
-
-          ' matched. Allocated piece ' +
-
-          res.allocatedPieceBarcode +
-
-          '.',
-
+          'Code ' + res.scannedBarcode + ' · Available Qty ' +
+          Number(res.item.AvailableQty || 0) +
+          '. Enter the required quantity in Current Bill.',
           'ok'
-
         );
-
+      } else if (res.lookupType === 'PRICE_BARCODE') {
+        msg('Price ' + money(res.item.SellingPrice) + ' · Size ' + (res.item.Size || '-') + ' · Date ' + fmtBarcodeDate(res.item.BarcodeDate) + ' added.','ok');
+      } else if (res.lookupType === 'TIER') {
+        msg(
+          res.scannedBarcode + ' matched. Allocated piece ' +
+          res.allocatedPieceBarcode + '.',
+          'ok'
+        );
       }
 
-
-
-      status.textContent =
-
-        'Ready to scan';
-
+      status.textContent = 'Ready to scan';
     })
-
     .withFailureHandler(e => {
-
       SCAN_BUSY = false;
-
       input.disabled = false;
-
       input.value = '';
-
-
-
-      status.textContent =
-
-        'Ready to scan';
-
-
-
-      msg(
-
-        e.message || e,
-
-        'err'
-
-      );
-
-
-
+      status.textContent = 'Ready to scan';
+      msg(e.message || e, 'err');
       focusScanner();
-
     })
-
-    .getBillingItemByBarcode(
-
-      raw,
-
-      getAllocatedPieceBarcodes()
-
-    );
-
+    .getBillingItemByBarcode(raw, getAllocatedPieceBarcodes());
 }
 
 
@@ -409,197 +297,91 @@ function posSearchKey(e) {
 
 
 function addToPOSCart(info, scannedBarcode) {
-
-  if (
-
-    !info ||
-
-    !info.Barcode ||
-
-    Number(info.Available || 0) <= 0
-
-  ) {
-
-    return msg(
-
-      'No stock available for this barcode.',
-
-      'err'
-
-    );
-
+  if (!info || !info.Barcode || Number(info.Available || 0) <= 0) {
+    return msg('No stock available for this barcode.', 'err');
   }
 
+  const sourceType = info.SourceType || 'STOCK';
 
+  // Missing-sticker / code-only billing never chooses an individual serial.
+  if (sourceType === 'DRESS_CODE_QTY') {
+    const dressCode = String(info.DisplayCode || info.Barcode || scannedBarcode || '').toUpperCase();
+    const availableQty = Number(info.AvailableQty || info.Available || 0);
+    let line = POS_CART.find(x => x.SourceType === 'DRESS_CODE_QTY' && String(x.DressCode || '') === dressCode);
 
-  const pieceBarcode =
+    if (line) {
+      if (Number(line.Qty || 0) + 1 > availableQty) {
+        return msg('Code ' + dressCode + ' has only ' + availableQty + ' effective item(s) available.', 'err');
+      }
+      line.Qty = Number(line.Qty || 0) + 1;
+      line.AvailableQty = availableQty;
+    } else {
+      line = {
+        GroupKey: 'DC|' + dressCode,
+        SourceType: 'DRESS_CODE_QTY',
+        DressCode: dressCode,
+        DisplayCode: dressCode,
+        SourceBarcode: dressCode,
+        PriceTierID: info.PriceTierID || '',
+        TierCode: info.TierCode || '',
+        TierName: info.TierName || '',
+        VendorName: info.VendorName || '',
+        CategoryName: info.CategoryName || '',
+        MRP: Number(info.MRP || 0),
+        Pieces: [],
+        Qty: 1,
+        AvailableQty: availableQty,
+        Rate: Number(info.SellingPrice || 0),
+        DiscountPct: 0
+      };
+      POS_CART.push(line);
+    }
 
-    String(info.Barcode);
-
-
-
-  if (
-
-    getAllocatedPieceBarcodes()
-
-      .some(
-
-        x =>
-
-          String(x) ===
-
-          pieceBarcode
-
-      )
-
-  ) {
-
-    return msg(
-
-      'This exact physical piece is already in the bill: ' +
-
-      pieceBarcode,
-
-      'err'
-
-    );
-
+    msg('Code ' + dressCode + ' added. Effective available Qty: ' + availableQty + '.', 'ok');
+    renderPOSCart();
+    focusScanner();
+    return;
   }
 
+  const pieceBarcode = String(info.Barcode);
+  if (getAllocatedPieceBarcodes().some(x => String(x) === pieceBarcode)) {
+    return msg('This exact physical piece is already in the bill: ' + pieceBarcode, 'err');
+  }
 
+  const groupKey = sourceType === 'PRICE_BARCODE'
+    ? ['PB', Number(info.SellingPrice||0), String(info.Size||''), String(info.BarcodeDate||'')].join('|')
+    : String(info.PriceTierID || '');
 
-  let line =
-
-    POS_CART.find(
-
-      x =>
-
-        String(x.PriceTierID || '') ===
-
-        String(info.PriceTierID || '')
-
-    );
-
-
+  let line = POS_CART.find(x => String(x.GroupKey || x.PriceTierID || '') === groupKey && x.SourceType !== 'DRESS_CODE_QTY');
 
   if (line) {
-
-    line.Pieces.push(
-
-      pieceBarcode
-
-    );
-
-
-
-    line.Qty =
-
-      line.Pieces.length;
-
-
-
+    line.Pieces.push(pieceBarcode);
+    line.Qty = line.Pieces.length;
   } else {
-
     line = {
-
-      SourceBarcode:
-
-        info.TierCode ||
-
-        scannedBarcode ||
-
-        info.Barcode,
-
-
-
-      PriceTierID:
-
-        info.PriceTierID || '',
-
-
-
-      TierCode:
-
-        info.TierCode || '',
-
-
-
-      TierName:
-
-        info.TierName || '',
-
-
-
-      VendorName:
-
-        info.VendorName || '',
-
-
-
-      CategoryName:
-
-        info.CategoryName || '',
-
-
-
-      MRP:
-
-        Number(info.MRP || 0),
-
-
-
-      Pieces:
-
-        [pieceBarcode],
-
-
-
-      Qty:
-
-        1,
-
-
-
-      Rate:
-
-        Number(info.SellingPrice || 0),
-
-
-
-      DiscountPct:
-
-        0
-
+      GroupKey: groupKey,
+      SourceType: sourceType,
+      DisplayCode: info.DisplayCode || info.TierCode || '',
+      Size: info.Size || '',
+      BarcodeDate: info.BarcodeDate || '',
+      SourceBarcode: info.DisplayCode || info.TierCode || scannedBarcode || info.Barcode,
+      PriceTierID: info.PriceTierID || '',
+      TierCode: info.TierCode || '',
+      TierName: info.TierName || '',
+      VendorName: info.VendorName || '',
+      CategoryName: info.CategoryName || '',
+      MRP: Number(info.MRP || 0),
+      Pieces: [pieceBarcode],
+      Qty: 1,
+      Rate: Number(info.SellingPrice || 0),
+      DiscountPct: 0
     };
-
-
-
-    POS_CART.push(
-
-      line
-
-    );
-
+    POS_CART.push(line);
   }
 
-
-
-  msg(
-
-    pieceBarcode +
-
-    ' added.',
-
-    'ok'
-
-  );
-
-
-
+  msg(pieceBarcode + ' added.', 'ok');
   renderPOSCart();
-
   focusScanner();
-
 }
 
 
@@ -777,55 +559,26 @@ function renderPOSCart() {
                   100
 
                 );
-
-
-
-              const displayCode = (x.Pieces || []).join(', ') || x.SourceBarcode || x.TierCode || ''; 
-
+              const isPriceBarcode = x.SourceType === 'PRICE_BARCODE';
+              const isDressCodeQty = x.SourceType === 'DRESS_CODE_QTY';
+              const displayCode = isDressCodeQty
+                ? (x.DressCode || x.DisplayCode || x.SourceBarcode || '')
+                : (isPriceBarcode
+                  ? (x.DisplayCode || x.SourceBarcode || '')
+                  : ((x.Pieces || []).join(', ') || x.SourceBarcode || x.TierCode || ''));
+              const detailHtml = isDressCodeQty
+                ? `<span class="muted"><strong>Missing sticker billing</strong> · Available Qty: ${Number(x.AvailableQty || 0)} · ${esc(x.CategoryName || '')}</span>`
+                : (isPriceBarcode
+                  ? `<span class="muted"><strong>Price:</strong> ${esc(money(x.Rate))} · <strong>Size:</strong> ${esc(x.Size || '-')} · <strong>Barcode Date:</strong> ${esc(fmtBarcodeDate(x.BarcodeDate))}</span>`
+                  : `<span class="muted">${esc(x.VendorName || '')} · ${esc(x.CategoryName || '')} · ${esc(x.TierName || '')}</span><br><span class="muted" style="font-size:10px">Pieces: ${esc(compactPieceList(x.Pieces))}</span>`);
 
 
               return `
-
                 <tr>
-
                   <td>
-
                     <strong>${esc(displayCode)}</strong>
-
                     <br>
-
-                    <span class="muted">
-
-                      ${esc(x.VendorName || '')}
-
-                      ·
-
-                      ${esc(x.CategoryName || '')}
-
-                      ·
-
-                      ${esc(x.TierName || '')}
-
-                    </span>
-
-
-
-                    <br>
-
-
-
-                    <span
-
-                      class="muted"
-
-                      style="font-size:10px">
-
-                      Pieces:
-
-                      ${esc(compactPieceList(x.Pieces))}
-
-                    </span>
-
+                    ${detailHtml}
                   </td>
 
 
@@ -989,175 +742,63 @@ function renderPOSCart() {
 
 
 function updatePOSQty(index, value) {
-
-  const row =
-
-    POS_CART[index];
-
-
-
+  const row = POS_CART[index];
   if (!row) return;
 
-
-
-  const target =
-
-    Number(value);
-
-
-
-  if (
-
-    !Number.isInteger(target) ||
-
-    target <= 0
-
-  ) {
-
-    msg(
-
-      'Quantity must be a whole number greater than zero.',
-
-      'err'
-
-    );
-
-
-
+  const target = Number(value);
+  if (!Number.isInteger(target) || target <= 0) {
+    msg('Quantity must be a whole number greater than zero.', 'err');
     renderPOSCart();
-
     return;
-
   }
 
-
-
-  const current =
-
-    Array.isArray(row.Pieces)
-
-      ? row.Pieces.length
-
-      : 0;
-
-
-
-  if (target === current) {
-
+  if (row.SourceType === 'DRESS_CODE_QTY') {
+    const available = Number(row.AvailableQty || 0);
+    if (target > available) {
+      msg('Insufficient stock for Code ' + (row.DressCode || row.DisplayCode || '') + '. Available Qty: ' + available + '.', 'err');
+      renderPOSCart();
+      return;
+    }
     row.Qty = target;
-
+    msg('Code ' + (row.DressCode || row.DisplayCode || '') + ' quantity set to ' + target + ' of ' + available + ' available.', 'ok');
     renderPOSCart();
-
+    focusScanner();
     return;
-
   }
 
+  const current = Array.isArray(row.Pieces) ? row.Pieces.length : 0;
+  if (target === current) {
+    row.Qty = target;
+    renderPOSCart();
+    return;
+  }
 
-
-  // Reducing qty only releases pieces from the current unsaved cart.
+  if (row.SourceType === 'PRICE_BARCODE' && target > current) {
+    msg('Scan each unique price barcode to increase quantity.','err');
+    row.Qty = current;
+    renderPOSCart();
+    return;
+  }
 
   if (target < current) {
-
-    row.Pieces =
-
-      row.Pieces.slice(
-
-        0,
-
-        target
-
-      );
-
-
-
-    row.Qty =
-
-      target;
-
-
-
-    msg(
-
-      'Quantity updated to ' +
-
-      target +
-
-      '.',
-
-      'ok'
-
-    );
-
-
-
+    row.Pieces = row.Pieces.slice(0, target);
+    row.Qty = target;
+    msg('Quantity updated to ' + target + '.', 'ok');
     renderPOSCart();
-
     focusScanner();
-
     return;
-
   }
 
-
-
-  // Increasing qty allocates additional AVAILABLE physical pieces.
-
-  const needed =
-
-    target -
-
-    current;
-
-
-
+  const needed = target - current;
   const lookupCode = row.PriceTierID ? 'PRICE_TIER_ID:'+row.PriceTierID : (row.TierCode || row.SourceBarcode);
-
-
-
   if (!lookupCode) {
-
-    msg(
-
-      'Cannot increase quantity because the Tier Code is unavailable.',
-
-      'err'
-
-    );
-
-
-
+    msg('Cannot increase quantity because the Tier Code is unavailable.', 'err');
     renderPOSCart();
-
     return;
-
   }
 
-
-
-  msg(
-
-    'Adding ' +
-
-    needed +
-
-    ' more piece(s)...',
-
-    ''
-
-  );
-
-
-
-  allocateMorePieces(
-
-    index,
-
-    lookupCode,
-
-    needed
-
-  );
-
+  msg('Adding ' + needed + ' more piece(s)...', '');
+  allocateMorePieces(index, lookupCode, needed);
 }
 
 
@@ -1856,34 +1497,24 @@ function completeSale() {
 
 
       Items:
-
-        POS_CART.flatMap(
-
-          line =>
-
-            (line.Pieces || [])
-
-              .map(
-
-                pieceBarcode => ({
-
-                  Barcode: pieceBarcode,
-
-                  Qty: 1,
-
-                  Rate: Number(line.Rate || 0),
-
-                  DiscountPct:
-
-                    Number(line.DiscountPct || 0)
-
-                })
-
-              )
-
-        ),
-
-
+        POS_CART.flatMap(line => {
+          if (line.SourceType === 'DRESS_CODE_QTY') {
+            return [{
+              SourceType: 'DRESS_CODE_QTY',
+              DressCode: line.DressCode || line.DisplayCode || line.SourceBarcode,
+              Barcode: line.DressCode || line.DisplayCode || line.SourceBarcode,
+              Qty: Number(line.Qty || 0),
+              Rate: Number(line.Rate || 0),
+              DiscountPct: Number(line.DiscountPct || 0)
+            }];
+          }
+          return (line.Pieces || []).map(pieceBarcode => ({
+            Barcode: pieceBarcode,
+            Qty: 1,
+            Rate: Number(line.Rate || 0),
+            DiscountPct: Number(line.DiscountPct || 0)
+          }));
+        }),
 
       Payments:
 
@@ -2267,17 +1898,11 @@ function downloadReceiptPDF(data) {
 
 
 
-    const itemName =
-
-      String(
-
-        (i.CategoryName || '') +
-
-        ' / ' +
-
-        (i.TierName || '')
-
-      );
+    const itemName = i.SourceType === 'DRESS_CODE_QTY'
+      ? String((i.CategoryName || 'ITEM') + ' / Code ' + (i.DisplayCode || i.Barcode || ''))
+      : (i.SourceType === 'PRICE_BARCODE'
+        ? String((i.DisplayCode || Number(i.Rate||0).toFixed(2)) + ' / Size ' + (i.Size || '-'))
+        : String((i.CategoryName || '') + ' / ' + (i.TierName || '')));
 
 
 
@@ -2372,13 +1997,13 @@ function downloadReceiptPDF(data) {
 
 
     doc.text(
-
-      String(i.Barcode || ''),
-
+      i.SourceType === 'DRESS_CODE_QTY'
+        ? ('Code-only sale | Missing barcode sticker | Qty ' + String(i.Qty || 0))
+        : (i.SourceType === 'PRICE_BARCODE'
+          ? ('Price: Rs. ' + Number(i.Rate||0).toFixed(2) + ' | Size: ' + String(i.Size||'-') + ' | Date: ' + fmtBarcodeDate(i.BarcodeDate))
+          : String(i.Barcode || '')),
       left,
-
       y
-
     );
 
 
@@ -2728,21 +2353,11 @@ function buildReceiptHtml(data) {
         <tr>
 
           <td>
-
-            ${esc(i.CategoryName)}
-
-            /
-
-            ${esc(i.TierName)}
-
-            <br>
-
-            <small>
-
-              ${esc(i.Barcode)}
-
-            </small>
-
+            ${i.SourceType === 'DRESS_CODE_QTY'
+              ? `${esc(i.CategoryName || 'ITEM')} / Code ${esc(i.DisplayCode || i.Barcode || '')}<br><small>Missing barcode sticker · Code-only quantity sale</small>`
+              : (i.SourceType === 'PRICE_BARCODE'
+                ? `${esc(i.DisplayCode || '')} / Size ${esc(i.Size || '-')}<br><small>Price ${esc(money(i.Rate))} · Date ${esc(fmtBarcodeDate(i.BarcodeDate))}</small>`
+                : `${esc(i.CategoryName)} / ${esc(i.TierName)}<br><small>${esc(i.Barcode)}</small>`)}
           </td>
 
 
