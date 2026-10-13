@@ -1996,15 +1996,15 @@ function downloadReceiptPDF(data) {
 
 
 
-    doc.text(
-      i.SourceType === 'DRESS_CODE_QTY'
-        ? ('Code-only sale | Missing barcode sticker | Qty ' + String(i.Qty || 0))
-        : (i.SourceType === 'PRICE_BARCODE'
+    if (i.SourceType !== 'DRESS_CODE_QTY') {
+      doc.text(
+        i.SourceType === 'PRICE_BARCODE'
           ? ('Price: Rs. ' + Number(i.Rate||0).toFixed(2) + ' | Size: ' + String(i.Size||'-') + ' | Date: ' + fmtBarcodeDate(i.BarcodeDate))
-          : String(i.Barcode || '')),
-      left,
-      y
-    );
+          : String(i.Barcode || ''),
+        left,
+        y
+      );
+    }
 
 
 
@@ -2354,7 +2354,7 @@ function buildReceiptHtml(data) {
 
           <td>
             ${i.SourceType === 'DRESS_CODE_QTY'
-              ? `${esc(i.CategoryName || 'ITEM')} / Code ${esc(i.DisplayCode || i.Barcode || '')}<br><small>Missing barcode sticker · Code-only quantity sale</small>`
+              ? `${esc(i.CategoryName || 'ITEM')} / Code ${esc(i.DisplayCode || i.Barcode || '')}`
               : (i.SourceType === 'PRICE_BARCODE'
                 ? `${esc(i.DisplayCode || '')} / Size ${esc(i.Size || '-')}<br><small>Price ${esc(money(i.Rate))} · Date ${esc(fmtBarcodeDate(i.BarcodeDate))}</small>`
                 : `${esc(i.CategoryName)} / ${esc(i.TierName)}<br><small>${esc(i.Barcode)}</small>`)}
