@@ -142,6 +142,13 @@ function fmtDate(value) {
 
 
 
+function fmtBarcodeDate(value) {
+  if (!value) return '';
+  const raw=String(value).slice(0,10);
+  const m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : fmtDate(value);
+}
+
 function indexBy(arr,key) {
 
   const map = {};
@@ -336,7 +343,9 @@ function posSearchKey(e) {
 
       );
 
-
+      if (res.lookupType === 'PRICE_BARCODE') {
+        msg('Price ' + money(res.item.SellingPrice) + ' · Size ' + (res.item.Size || '-') + ' · Date ' + fmtBarcodeDate(res.item.BarcodeDate) + ' added.','ok');
+      }
 
       if (res.lookupType === 'TIER') {
 
@@ -468,17 +477,12 @@ function addToPOSCart(info, scannedBarcode) {
 
 
 
-  let line =
+  const sourceType = info.SourceType || 'STOCK';
+  const groupKey = sourceType === 'PRICE_BARCODE'
+    ? ['PB', Number(info.SellingPrice||0), String(info.Size||''), String(info.BarcodeDate||'')].join('|')
+    : String(info.PriceTierID || '');
 
-    POS_CART.find(
-
-      x =>
-
-        String(x.PriceTierID || '') ===
-
-        String(info.PriceTierID || '')
-
-    );
+  let line = POS_CART.find(x => String(x.GroupKey || x.PriceTierID || '') === groupKey);
 
 
 
@@ -502,7 +506,14 @@ function addToPOSCart(info, scannedBarcode) {
 
     line = {
 
+      GroupKey: groupKey,
+      SourceType: sourceType,
+      DisplayCode: info.DisplayCode || info.TierCode || '',
+      Size: info.Size || '',
+      BarcodeDate: info.BarcodeDate || '',
       SourceBarcode:
+
+        info.DisplayCode ||
 
         info.TierCode ||
 
@@ -777,55 +788,20 @@ function renderPOSCart() {
                   100
 
                 );
-
-
-
-              const displayCode = (x.Pieces || []).join(', ') || x.SourceBarcode || x.TierCode || ''; 
-
-
+              const isPriceBarcode = x.SourceType === 'PRICE_BARCODE';
+              const displayCode = isPriceBarcode
+                ? (x.DisplayCode || x.SourceBarcode || '')
+                : ((x.Pieces || []).join(', ') || x.SourceBarcode || x.TierCode || '');
+              const detailHtml = isPriceBarcode
+                ? `<span class="muted"><strong>Price:</strong> ${esc(money(x.Rate))} · <strong>Size:</strong> ${esc(x.Size || '-')} · <strong>Barcode Date:</strong> ${esc(fmtBarcodeDate(x.BarcodeDate))}</span>`
+                : `<span class="muted">${esc(x.VendorName || '')} · ${esc(x.CategoryName || '')} · ${esc(x.TierName || '')}</span><br><span class="muted" style="font-size:10px">Pieces: ${esc(compactPieceList(x.Pieces))}</span>`;
 
               return `
-
                 <tr>
-
                   <td>
-
                     <strong>${esc(displayCode)}</strong>
-
                     <br>
-
-                    <span class="muted">
-
-                      ${esc(x.VendorName || '')}
-
-                      ·
-
-                      ${esc(x.CategoryName || '')}
-
-                      ·
-
-                      ${esc(x.TierName || '')}
-
-                    </span>
-
-
-
-                    <br>
-
-
-
-                    <span
-
-                      class="muted"
-
-                      style="font-size:10px">
-
-                      Pieces:
-
-                      ${esc(compactPieceList(x.Pieces))}
-
-                    </span>
-
+                    ${detailHtml}
                   </td>
 
 
@@ -1052,7 +1028,12 @@ function updatePOSQty(index, value) {
 
   }
 
-
+  if (row.SourceType === 'PRICE_BARCODE' && target > current) {
+    msg('Scan each unique price barcode to increase quantity.','err');
+    row.Qty = current;
+    renderPOSCart();
+    return;
+  }
 
   // Reducing qty only releases pieces from the current unsaved cart.
 
@@ -2267,17 +2248,9 @@ function downloadReceiptPDF(data) {
 
 
 
-    const itemName =
-
-      String(
-
-        (i.CategoryName || '') +
-
-        ' / ' +
-
-        (i.TierName || '')
-
-      );
+    const itemName = i.SourceType === 'PRICE_BARCODE'
+      ? String((i.DisplayCode || Number(i.Rate||0).toFixed(2)) + ' / Size ' + (i.Size || '-'))
+      : String((i.CategoryName || '') + ' / ' + (i.TierName || ''));
 
 
 
@@ -2372,13 +2345,11 @@ function downloadReceiptPDF(data) {
 
 
     doc.text(
-
-      String(i.Barcode || ''),
-
+      i.SourceType === 'PRICE_BARCODE'
+        ? ('Price: Rs. ' + Number(i.Rate||0).toFixed(2) + ' | Size: ' + String(i.Size||'-') + ' | Date: ' + fmtBarcodeDate(i.BarcodeDate))
+        : String(i.Barcode || ''),
       left,
-
       y
-
     );
 
 
@@ -2728,21 +2699,9 @@ function buildReceiptHtml(data) {
         <tr>
 
           <td>
-
-            ${esc(i.CategoryName)}
-
-            /
-
-            ${esc(i.TierName)}
-
-            <br>
-
-            <small>
-
-              ${esc(i.Barcode)}
-
-            </small>
-
+            ${i.SourceType === 'PRICE_BARCODE'
+              ? `${esc(i.DisplayCode || '')} / Size ${esc(i.Size || '-')}<br><small>Price ${esc(money(i.Rate))} · Date ${esc(fmtBarcodeDate(i.BarcodeDate))}</small>`
+              : `${esc(i.CategoryName)} / ${esc(i.TierName)}<br><small>${esc(i.Barcode)}</small>`}
           </td>
 
 

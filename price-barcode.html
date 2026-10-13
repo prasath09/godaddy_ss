@@ -17,7 +17,7 @@
     .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
     h1{margin:0;font-size:24px}.sub{color:var(--muted);font-size:13px;margin-top:5px}
     .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
-    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
     label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
     input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:18px}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
@@ -65,24 +65,29 @@
           <input id="price_amount" type="number" min="0.01" step="0.01" placeholder="Example: 499" autocomplete="off">
         </div>
         <div>
+          <label>Size *</label>
+          <input id="price_size" type="text" maxlength="50" placeholder="Example: M / XL / 32" autocomplete="off">
+        </div>
+        <div>
           <label>Sticker Quantity *</label>
           <input id="price_qty" type="number" min="1" max="500" step="1" value="1">
+          <input id="barcode_date" type="hidden">
         </div>
       </div>
       <div class="actions">
-        <button id="generate_btn" class="btn primary" type="button">Generate Preview</button>
+        <button id="generate_btn" class="btn primary" type="button">Generate & Save Barcodes</button>
         <button id="print_btn" class="btn secondary" type="button" disabled>Print Stickers</button>
       </div>
       <div id="msg" class="msg"></div>
     </div>
 
     <div class="card">
-      <div class="note">Barcode value is generated automatically from the amount. Example: ₹499 → <strong>P499</strong>. Whole amounts print without decimals; decimal amounts retain two decimals.</div>
+      <div class="note">Enter Price + Size. Today's date is saved automatically in the hidden barcode table. The visible code is the price (example <strong>499</strong>), while the barcode itself contains a unique internal value such as <strong>PB499-M-20261012-001</strong>.</div>
       <div class="preview-wrap">
         <div class="preview-label" aria-label="Price barcode label preview">
           <div class="label-heading"><span>SS</span><strong id="preview_price">₹499</strong></div>
           <svg id="preview_barcode" class="barcode-svg"></svg>
-          <div class="label-bottom"><span id="preview_code" class="label-code">P499</span></div>
+          <div class="label-bottom" style="gap:4mm"><span id="preview_code" class="label-code">499</span><strong id="preview_size" style="font-size:14px">M</strong></div>
         </div>
       </div>
     </div>
