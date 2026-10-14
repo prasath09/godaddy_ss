@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SS Branded Outlet - Reports</title>
+  <style>
+    :root{--bg:#f6f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--border:#e5e7eb;--primary:#111827;--accent:#2563eb;--soft:#eef2ff;--ok:#047857;--danger:#b91c1c;--warn:#92400e}
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .shell{max-width:1500px;margin:auto;padding:20px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+    h1{margin:0;font-size:24px}.sub{color:var(--muted);font-size:13px;margin-top:5px}.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px}
+    .filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.filters label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}.filters input,.filters select{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;background:#fff}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700}.primary{background:var(--primary);color:#fff}.secondary{background:var(--soft);color:#1d4ed8}
+    .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}.tabs button{border:1px solid var(--border);background:#fff;padding:10px 14px;border-radius:9px;cursor:pointer;font-weight:700}.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .panel{display:none}.panel.active{display:block}.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}.kpi{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px}.kpi .n{font-size:21px;font-weight:800}.kpi .l{font-size:11px;color:var(--muted);margin-top:4px}.kpi.good .n{color:var(--ok)}.kpi.bad .n{color:var(--danger)}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.table-wrap{overflow:auto;max-height:520px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}th{position:sticky;top:0;background:#fff;color:var(--muted);font-size:10px;text-transform:uppercase;z-index:1}.right{text-align:right}.muted{color:var(--muted)}.note{padding:10px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px}.msg{font-size:13px;margin-top:10px;min-height:18px}.err{color:var(--danger)}.ok{color:var(--ok)}
+    @media(max-width:1100px){.filters{grid-template-columns:repeat(2,1fr)}.kpis{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}}@media(max-width:650px){.filters,.kpis{grid-template-columns:1fr 1fr}.shell{padding:10px}}
+    @media print{.filters-card,.tabs,.top .actions,.export-btn{display:none!important}.shell{max-width:none;padding:0}.card{border:0;padding:6px;margin:0}.panel{display:none!important}.panel.active{display:block!important}.table-wrap{max-height:none;overflow:visible}th{position:static}}
+  </style>
+  <script src="textile-config.js"></script><script src="api-bridge.js"></script>
+</head>
+<body><div class="shell">
+  <div class="top"><div><h1>SS BRANDED OUTLET - Reports</h1><div class="sub">Sales · Profit · Stock · Purchase · Vendor Analysis</div></div><div class="actions"><button class="btn secondary" onclick="window.print()">Print Current Report</button><button class="btn secondary" onclick="window.close()">Close</button></div></div>
+  <div class="card filters-card"><div class="filters">
+    <div><label>From Date</label><input id="from_date" type="date"></div><div><label>To Date</label><input id="to_date" type="date"></div>
+    <div><label>Vendor</label><select id="vendor"><option value="">All Vendors</option></select></div><div><label>Category</label><select id="category"><option value="">All Categories</option></select></div>
+    <div><label>Quick Period</label><select id="quick" onchange="applyQuickPeriod(this.value)"><option value="MONTH">This Month</option><option value="TODAY">Today</option><option value="30">Last 30 Days</option><option value="FY">Current FY</option></select></div>
+  </div><div class="actions"><button id="load_btn" class="btn primary" onclick="loadReports()">Load Reports</button><button class="btn secondary export-btn" onclick="exportCurrentCSV()">Export Current Table CSV</button></div><div id="msg" class="msg"></div></div>
+  <div class="tabs"><button class="active" data-panel="dashboard" onclick="openTab(this)">Dashboard</button><button data-panel="sales" onclick="openTab(this)">Sales & Profit</button><button data-panel="stock" onclick="openTab(this)">Stock Analysis</button><button data-panel="purchase" onclick="openTab(this)">Purchase & Vendor</button><button data-panel="adjustments" onclick="openTab(this)">Returns / Cancelled</button></div>
+
+  <section id="dashboard" class="panel active"><div id="dashboard_kpis" class="kpis"></div><div class="grid2"><div class="card"><h3>Daily Sales & Profit</h3><div id="daily_table" class="table-wrap"></div></div><div class="card"><h3>Category Performance</h3><div id="category_table" class="table-wrap"></div></div></div><div class="grid2"><div class="card"><h3>Payment Summary</h3><div id="payment_table" class="table-wrap"></div></div><div class="card"><h3>Current Stock Snapshot</h3><div id="stock_snapshot" class="table-wrap"></div></div></div></section>
+  <section id="sales" class="panel"><div class="grid2"><div class="card"><h3>Category Performance</h3><div id="sales_category" class="table-wrap"></div></div><div class="card"><h3>Vendor Sales Performance</h3><div id="sales_vendor" class="table-wrap"></div></div></div><div class="grid2"><div class="card"><h3>Selling Price Analysis</h3><div id="sales_price" class="table-wrap"></div></div><div class="card"><h3>Payment Mode Analysis</h3><div id="sales_payment" class="table-wrap"></div></div></div><div class="card"><h3>Daily Sales Detail</h3><div id="sales_daily" class="table-wrap"></div></div></section>
+  <section id="stock" class="panel"><div id="stock_kpis" class="kpis"></div><div class="grid2"><div class="card"><h3>Stock Ageing</h3><div id="stock_ageing" class="table-wrap"></div></div><div class="card"><h3>Stock by Category</h3><div id="stock_category" class="table-wrap"></div></div></div><div class="card"><h3>Fast / Slow Moving Dress Codes</h3><div class="note" style="margin-bottom:10px">Sold Qty is based on the selected report period; Available Qty is current stock.</div><div id="movement_table" class="table-wrap"></div></div></section>
+  <section id="purchase" class="panel"><div id="purchase_kpis" class="kpis"></div><div class="card"><h3>Purchase Register</h3><div id="purchase_table" class="table-wrap"></div></div></section>
+  <section id="adjustments" class="panel"><div class="grid2"><div class="card"><h3>Returns / Exchanges</h3><div id="adjustment_table" class="table-wrap"></div></div><div class="card"><h3>Cancelled Bills</h3><div id="cancel_table" class="table-wrap"></div></div></div></section>
+</div><script src="reports.js?v=reports-1"></script></body></html>
