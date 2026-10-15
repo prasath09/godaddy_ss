@@ -16,10 +16,38 @@ window.onload = () => {
 
   renderPaymentBalance();
 
+  loadLatestBillForPrint();
+
   focusScanner();
 
 };
 
+
+
+function loadLatestBillForPrint() {
+  const printBtn = document.getElementById('print_last_bill');
+  if (!printBtn) return;
+
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res && res.SaleID) {
+        LAST_SALE_ID = Number(res.SaleID);
+        printBtn.disabled = false;
+        printBtn.textContent = res.BillNo ? ('Print Last Bill - ' + res.BillNo) : 'Print Last Bill';
+      } else {
+        LAST_SALE_ID = '';
+        printBtn.disabled = true;
+        printBtn.textContent = 'Print Last Bill';
+      }
+    })
+    .withFailureHandler(() => {
+      // Billing must remain usable even if the last-bill lookup fails.
+      LAST_SALE_ID = '';
+      printBtn.disabled = true;
+      printBtn.textContent = 'Print Last Bill';
+    })
+    .getLatestSaleForPrint();
+}
 
 
 function setToday(id) {
@@ -1794,17 +1822,28 @@ function printReceiptData(
 
 
 function printLastBill() {
+  if (LAST_SALE_ID) {
+    printSale(LAST_SALE_ID);
+    return;
+  }
 
-  if (!LAST_SALE_ID) return;
-
-
-
-  printSale(
-
-    LAST_SALE_ID
-
-  );
-
+  msg('Finding the latest completed bill...', '');
+  google.script.run
+    .withSuccessHandler(res => {
+      if (!res || !res.SaleID) {
+        msg('No completed bill is available to print.', 'err');
+        return;
+      }
+      LAST_SALE_ID = Number(res.SaleID);
+      const printBtn = document.getElementById('print_last_bill');
+      if (printBtn) {
+        printBtn.disabled = false;
+        printBtn.textContent = res.BillNo ? ('Print Last Bill - ' + res.BillNo) : 'Print Last Bill';
+      }
+      printSale(LAST_SALE_ID);
+    })
+    .withFailureHandler(e => msg(e.message || e, 'err'))
+    .getLatestSaleForPrint();
 }
 
 
