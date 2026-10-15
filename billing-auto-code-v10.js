@@ -1529,1181 +1529,184 @@ function completeSale() {
 
 
 function downloadReceiptPDF(data) {
+  if (!window.jspdf || !window.jspdf.jsPDF) throw new Error('PDF library not loaded.');
 
-  if (
+  const sale = data.sale || {};
+  const items = data.items || [];
+  const payments = data.payments || [];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
 
-    !window.jspdf ||
-
-    !window.jspdf.jsPDF
-
-  ) {
-
-    throw new Error(
-
-      'PDF library not loaded.'
-
-    );
-
-  }
-
-
-
-  const sale =
-
-    data.sale || {};
-
-
-
-  const items =
-
-    data.items || [];
-
-
-
-  const payments =
-
-    data.payments || [];
-
-
-
-  const { jsPDF } =
-
-    window.jspdf;
-
-
-
-  const doc =
-
-    new jsPDF({
-
-      orientation:'portrait',
-
-      unit:'mm',
-
-      format:'a4'
-
-    });
-
-
-
-  const pageWidth =
-
-    doc.internal.pageSize.getWidth();
-
-
-
+  const pageWidth = doc.internal.pageSize.getWidth();
   const left = 14;
-
   const right = pageWidth - 14;
-
-
-
+  const customerX = 111;
+  const qtyX = 118;
+  const rateX = 150;
+  const totalLabelX = 145;
   let y = 16;
 
-
-
-  doc.setFont(
-
-    'helvetica',
-
-    'bold'
-
-  );
-
-
-
+  doc.setFont('helvetica','bold');
   doc.setFontSize(16);
+  doc.text('SS BRANDED OUTLET', pageWidth / 2, y, {align:'center'});
 
-
-
-  doc.text(
-
-    'SS TEXTILE',
-
-    pageWidth / 2,
-
-    y,
-
-    {align:'center'}
-
-  );
-
-
-
-  y += 7;
-
-
-
-  doc.setFont(
-
-    'helvetica',
-
-    'normal'
-
-  );
-
-
-
+  y += 6;
+  doc.setFont('helvetica','normal');
   doc.setFontSize(10);
+  doc.text('GSTIN: 33NGTPS6785L1ZX', pageWidth / 2, y, {align:'center'});
 
-
-
-  if (data.locationName) {
-
-    doc.text(
-
-      String(data.locationName),
-
-      pageWidth / 2,
-
-      y,
-
-      {align:'center'}
-
-    );
-
-
-
-    y += 5;
-
-  }
-
-
-
-  doc.text(
-
-    'Sales Bill',
-
-    pageWidth / 2,
-
-    y,
-
-    {align:'center'}
-
-  );
-
-
-
+  y += 10;
+  doc.line(left, y, right, y);
   y += 7;
 
-
-
-  doc.line(
-
-    left,
-
-    y,
-
-    right,
-
-    y
-
-  );
-
-
-
+  doc.text('Date: ' + fmtDate(sale.SaleDate), left, y);
+  doc.text('Customer Name: ' + String(sale.CustomerName || 'Walk-in'), customerX, y);
   y += 6;
-
-
-
-  doc.setFontSize(10);
-
-
-
-  doc.text(
-
-    'Bill: ' +
-
-    String(sale.BillNo || ''),
-
-    left,
-
-    y
-
-  );
-
-
-
-  doc.text(
-
-    'Date: ' +
-
-    fmtDate(sale.SaleDate),
-
-    right,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  y += 6;
-
-
-
-  doc.text(
-
-    'Customer: ' +
-
-    String(
-
-      sale.CustomerName ||
-
-      'Walk-in'
-
-    ),
-
-    left,
-
-    y
-
-  );
-
-
-
-  if (sale.CustomerMobile) {
-
-    y += 5;
-
-
-
-    doc.text(
-
-      'Mobile: ' +
-
-      String(sale.CustomerMobile),
-
-      left,
-
-      y
-
-    );
-
-  }
-
-
-
-  y += 8;
-
-
-
-  doc.setFont(
-
-    'helvetica',
-
-    'bold'
-
-  );
-
-
-
-  doc.text(
-
-    'Item',
-
-    left,
-
-    y
-
-  );
-
-
-
-  doc.text(
-
-    'Qty',
-
-    118,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  doc.text(
-
-    'Rate',
-
-    150,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  doc.text(
-
-    'Amount',
-
-    right,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  y += 3;
-
-
-
-  doc.line(
-
-    left,
-
-    y,
-
-    right,
-
-    y
-
-  );
-
-
-
-  y += 5;
-
-
-
-  doc.setFont(
-
-    'helvetica',
-
-    'normal'
-
-  );
-
-
-
-  items.forEach(i => {
-
-    if (y > 270) {
-
-      doc.addPage();
-
-      y = 18;
-
-    }
-
-
-
-    const itemName = i.SourceType === 'DRESS_CODE_QTY'
-      ? String((i.CategoryName || 'ITEM') + ' / Code ' + (i.DisplayCode || i.Barcode || ''))
-      : (i.SourceType === 'PRICE_BARCODE'
-        ? String((i.DisplayCode || Number(i.Rate||0).toFixed(2)) + ' / Size ' + (i.Size || '-'))
-        : String((i.CategoryName || '') + ' / ' + (i.TierName || '')));
-
-
-
-    const itemLines =
-
-      doc.splitTextToSize(
-
-        itemName,
-
-        82
-
-      );
-
-
-
-    doc.text(
-
-      itemLines,
-
-      left,
-
-      y
-
-    );
-
-
-
-    doc.text(
-
-      String(i.Qty || 1),
-
-      118,
-
-      y,
-
-      {align:'right'}
-
-    );
-
-
-
-    doc.text(
-
-      Number(i.Rate || 0)
-
-        .toFixed(2),
-
-      150,
-
-      y,
-
-      {align:'right'}
-
-    );
-
-
-
-    doc.text(
-
-      Number(i.LineTotal || 0)
-
-        .toFixed(2),
-
-      right,
-
-      y,
-
-      {align:'right'}
-
-    );
-
-
-
-    const nameHeight =
-
-      Math.max(
-
-        itemLines.length * 4,
-
-        4
-
-      );
-
-
-
-    y += nameHeight;
-
-
-
-    doc.setFontSize(8);
-
-
-
-    if (i.SourceType !== 'DRESS_CODE_QTY') {
-      doc.text(
-        i.SourceType === 'PRICE_BARCODE'
-          ? ('Price: Rs. ' + Number(i.Rate||0).toFixed(2) + ' | Size: ' + String(i.Size||'-') + ' | Date: ' + fmtBarcodeDate(i.BarcodeDate))
-          : String(i.Barcode || ''),
-        left,
-        y
-      );
-    }
-
-
-
-    doc.setFontSize(10);
-
-
-
-    y += 6;
-
-  });
-
-
-
-  y += 2;
-
-
-
-  doc.line(
-
-    left,
-
-    y,
-
-    right,
-
-    y
-
-  );
-
-
-
-  y += 7;
-
-
-
-  const totalLabelX = 145;
-
-
-
-  doc.text(
-
-    'Subtotal:',
-
-    totalLabelX,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  doc.text(
-
-    Number(sale.SubTotal || 0)
-
-      .toFixed(2),
-
-    right,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  y += 5;
-
-
-
-  doc.text(
-
-    'Item Discount:',
-
-    totalLabelX,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  doc.text(
-
-    Number(sale.LineDiscount || 0)
-
-      .toFixed(2),
-
-    right,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  y += 5;
-
-
-
-  doc.text(
-
-    'Bill Discount:',
-
-    totalLabelX,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  doc.text(
-
-    Number(sale.BillDiscount || 0)
-
-      .toFixed(2),
-
-    right,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  y += 6;
-
-
-
-  doc.setFont(
-
-    'helvetica',
-
-    'bold'
-
-  );
-
-
-
-  doc.setFontSize(12);
-
-
-
-  doc.text(
-
-    'Net Amount:',
-
-    totalLabelX,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
-
-  doc.text(
-
-    'Rs. ' +
-
-    Number(sale.NetAmount || 0)
-
-      .toFixed(2),
-
-    right,
-
-    y,
-
-    {align:'right'}
-
-  );
-
-
+  doc.text('Bill No: ' + String(sale.BillNo || ''), left, y);
+  doc.text('Mobile: ' + String(sale.CustomerMobile || ''), customerX, y);
 
   y += 9;
+  doc.setFont('helvetica','bold');
+  doc.text('Item', left, y);
+  doc.text('Qty', qtyX, y, {align:'right'});
+  doc.text('Rate', rateX, y, {align:'right'});
+  doc.text('Amount', right, y, {align:'right'});
+  y += 3;
+  doc.line(left, y, right, y);
+  y += 6;
+  doc.setFont('helvetica','normal');
 
-
-
-  doc.setFont(
-
-    'helvetica',
-
-    'normal'
-
-  );
-
-
-
-  doc.setFontSize(10);
-
-
-
-  doc.text(
-
-    'Payment:',
-
-    left,
-
-    y
-
-  );
-
-
-
-  y += 5;
-
-
-
-  payments.forEach(p => {
-
-    let line =
-
-      String(p.PaymentMode || '') +
-
-      ': Rs. ' +
-
-      Number(p.Amount || 0)
-
-        .toFixed(2);
-
-
-
-    if (p.ReferenceNo) {
-
-      line +=
-
-        ' (' +
-
-        String(p.ReferenceNo) +
-
-        ')';
-
-    }
-
-
-
-    doc.text(
-
-      line,
-
-      left,
-
-      y
-
-    );
-
-
-
-    y += 5;
-
+  items.forEach(i => {
+    if (y > 260) { doc.addPage(); y = 18; }
+    const code = String(i.DisplayCode || i.Barcode || '').trim();
+    const category = String(i.CategoryName || '').trim();
+    const itemName = category && code ? category + '/' + code : (code || category || 'ITEM');
+    const itemLines = doc.splitTextToSize(itemName, 82);
+    doc.text(itemLines, left, y);
+    doc.text(String(i.Qty || 1), qtyX, y, {align:'right'});
+    doc.text(Number(i.Rate || 0).toFixed(2), rateX, y, {align:'right'});
+    doc.text(Number(i.LineTotal || 0).toFixed(2), right, y, {align:'right'});
+    y += Math.max(itemLines.length * 5, 5) + 2;
   });
 
+  y += 2;
+  doc.line(left, y, right, y);
+  y += 7;
+  doc.text('Subtotal:', totalLabelX, y, {align:'right'});
+  doc.text(Number(sale.SubTotal || 0).toFixed(2), right, y, {align:'right'});
+  y += 5;
+  doc.text('Item Discount:', totalLabelX, y, {align:'right'});
+  doc.text(Number(sale.LineDiscount || 0).toFixed(2), right, y, {align:'right'});
+  y += 5;
+  doc.text('Bill Discount:', totalLabelX, y, {align:'right'});
+  doc.text(Number(sale.BillDiscount || 0).toFixed(2), right, y, {align:'right'});
 
-
+  y += 7;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(12);
+  doc.text('Net Amount:', totalLabelX, y, {align:'right'});
+  doc.text('Rs. ' + Number(sale.NetAmount || 0).toFixed(2), right, y, {align:'right'});
   y += 6;
+  doc.setFontSize(10);
+  doc.text('Inclusive of GST', right, y, {align:'right'});
 
+  y += 11;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10);
+  doc.text('Payment:', left, y);
+  y += 5;
+  payments.forEach(p => {
+    let line = String(p.PaymentMode || '') + ': Rs. ' + Number(p.Amount || 0).toFixed(2);
+    if (p.ReferenceNo) line += ' (' + String(p.ReferenceNo) + ')';
+    doc.text(line, left, y);
+    y += 5;
+  });
 
-
-  doc.text(
-
-    'Thank you',
-
-    pageWidth / 2,
-
-    y,
-
-    {align:'center'}
-
-  );
-
-
-
-  const safeBillNo =
-
-    String(
-
-      sale.BillNo ||
-
-      'Bill'
-
-    )
-
-    .replace(
-
-      /[^A-Za-z0-9_-]/g,
-
-      '_'
-
-    );
-
-
-
-  doc.save(
-
-    safeBillNo +
-
-    '.pdf'
-
-  );
-
+  y += 7;
+  doc.text('Thank you', pageWidth / 2, y, {align:'center'});
+  const safeBillNo = String(sale.BillNo || 'Bill').replace(/[^A-Za-z0-9_-]/g,'_');
+  doc.save(safeBillNo + '.pdf');
 }
-
-
-
 
 
 function buildReceiptHtml(data) {
+  const sale = data.sale || {};
+  const items = data.items || [];
+  const payments = data.payments || [];
 
-  const sale =
+  const itemRows = items.map(i => {
+    const code = String(i.DisplayCode || i.Barcode || '').trim();
+    const category = String(i.CategoryName || '').trim();
+    const itemName = category && code ? category + '/' + code : (code || category || 'ITEM');
+    return `
+      <tr>
+        <td>${esc(itemName)}</td>
+        <td class="num">${Number(i.Qty || 1)}</td>
+        <td class="num">${Number(i.Rate || 0).toFixed(2)}</td>
+        <td class="num">${Number(i.LineTotal || 0).toFixed(2)}</td>
+      </tr>`;
+  }).join('');
 
-    data.sale || {};
-
-
-
-  const items =
-
-    data.items || [];
-
-
-
-  const payments =
-
-    data.payments || [];
-
-
-
-  const itemRows =
-
-    items
-
-      .map(i => `
-
-        <tr>
-
-          <td>
-            ${i.SourceType === 'DRESS_CODE_QTY'
-              ? `${esc(i.CategoryName || 'ITEM')} / Code ${esc(i.DisplayCode || i.Barcode || '')}`
-              : (i.SourceType === 'PRICE_BARCODE'
-                ? `${esc(i.DisplayCode || '')} / Size ${esc(i.Size || '-')}<br><small>Price ${esc(money(i.Rate))} · Date ${esc(fmtBarcodeDate(i.BarcodeDate))}</small>`
-                : `${esc(i.CategoryName)} / ${esc(i.TierName)}<br><small>${esc(i.Barcode)}</small>`)}
-          </td>
-
-
-
-          <td style="text-align:right">
-
-            ${i.Qty}
-
-          </td>
-
-
-
-          <td style="text-align:right">
-
-            ${Number(i.Rate || 0).toFixed(2)}
-
-          </td>
-
-
-
-          <td style="text-align:right">
-
-            ${Number(i.LineTotal || 0).toFixed(2)}
-
-          </td>
-
-        </tr>
-
-      `)
-
-      .join('');
-
-
-
-  const paymentRows =
-
-    payments
-
-      .map(p => `
-
-        <div>
-
-          ${esc(p.PaymentMode)}:
-
-          ₹${Number(p.Amount || 0).toFixed(2)}
-
-          ${
-
-            p.ReferenceNo
-
-              ? '(' + esc(p.ReferenceNo) + ')'
-
-              : ''
-
-          }
-
-        </div>
-
-      `)
-
-      .join('');
-
-
+  const paymentRows = payments.map(p => `
+    <div>${esc(p.PaymentMode)}: Rs. ${Number(p.Amount || 0).toFixed(2)}${p.ReferenceNo ? ' (' + esc(p.ReferenceNo) + ')' : ''}</div>
+  `).join('');
 
   return `
-
     <!doctype html>
-
     <html>
-
-
-
     <head>
-
       <title>${esc(sale.BillNo || 'Bill')}</title>
-
-
-
       <style>
-
-        body{
-
-          font-family:Arial,sans-serif;
-
-          padding:18px;
-
-          color:#111;
-
-          font-size:13px;
-
-        }
-
-
-
-        h2{
-
-          text-align:center;
-
-          margin:0 0 4px;
-
-        }
-
-
-
-        .center{
-
-          text-align:center;
-
-        }
-
-
-
-        table{
-
-          width:100%;
-
-          border-collapse:collapse;
-
-          margin-top:12px;
-
-        }
-
-
-
-        th,td{
-
-          border-bottom:1px solid #ddd;
-
-          padding:7px 3px;
-
-          text-align:left;
-
-        }
-
-
-
-        .totals{
-
-          margin-top:14px;
-
-          text-align:right;
-
-          line-height:1.8;
-
-        }
-
-
-
-        @media print{
-
-          button{display:none}
-
-        }
-
+        @page{size:A4 portrait;margin:14mm}
+        *{box-sizing:border-box}
+        body{font-family:Arial,sans-serif;margin:0;color:#111;font-size:13px}
+        .header{text-align:center}
+        .header h2{margin:0 0 5px;font-size:20px}
+        .gstin{font-size:13px}
+        .divider{border:0;border-top:1px solid #111;margin:14px 0 11px}
+        .details{display:grid;grid-template-columns:1fr 1fr;column-gap:55px;row-gap:8px;margin-bottom:18px}
+        table{width:100%;border-collapse:collapse}
+        th,td{padding:7px 0;text-align:left;vertical-align:top}
+        thead tr{border-bottom:1px solid #111}
+        tbody tr:last-child{border-bottom:1px solid #111}
+        th.num,td.num{text-align:right}
+        .totals{margin-top:10px;margin-left:auto;width:48%;line-height:1.75}
+        .total-row{display:flex;justify-content:space-between;gap:20px}
+        .net{font-size:16px;font-weight:700;margin-top:2px}
+        .gst-note{text-align:right;font-weight:700;margin-top:1px}
+        .payment{margin-top:16px;line-height:1.6}
+        .thanks{text-align:center;margin-top:24px}
+        @media print{button{display:none!important}}
       </style>
-
     </head>
-
-
-
     <body>
-
-
-
-      <h2>SS TEXTILE</h2>
-
-
-
-      <div class="center">
-
-        ${esc(data.locationName || '')}
-
+      <div class="header">
+        <h2>SS BRANDED OUTLET</h2>
+        <div class="gstin">GSTIN: 33NGTPS6785L1ZX</div>
       </div>
-
-
-
-      <div class="center">
-
-        Sales Bill
-
+      <hr class="divider">
+      <div class="details">
+        <div>Date: ${esc(fmtDate(sale.SaleDate))}</div>
+        <div>Customer Name: ${esc(sale.CustomerName || 'Walk-in')}</div>
+        <div>Bill No: ${esc(sale.BillNo || '')}</div>
+        <div>Mobile: ${esc(sale.CustomerMobile || '')}</div>
       </div>
-
-
-
-      <hr>
-
-
-
-      <div>
-
-        <strong>Bill:</strong>
-
-        ${esc(sale.BillNo || '')}
-
-      </div>
-
-
-
-      <div>
-
-        <strong>Date:</strong>
-
-        ${esc(fmtDate(sale.SaleDate))}
-
-      </div>
-
-
-
-      <div>
-
-        <strong>Customer:</strong>
-
-        ${esc(sale.CustomerName || 'Walk-in')}
-
-      </div>
-
-
-
-      ${
-
-        sale.CustomerMobile
-
-          ? `
-
-            <div>
-
-              <strong>Mobile:</strong>
-
-              ${esc(sale.CustomerMobile)}
-
-            </div>
-
-          `
-
-          : ''
-
-      }
-
-
-
       <table>
-
-        <thead>
-
-          <tr>
-
-            <th>Item</th>
-
-            <th style="text-align:right">Qty</th>
-
-            <th style="text-align:right">Rate</th>
-
-            <th style="text-align:right">Amount</th>
-
-          </tr>
-
-        </thead>
-
-
-
-        <tbody>
-
-          ${itemRows}
-
-        </tbody>
-
+        <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
+        <tbody>${itemRows}</tbody>
       </table>
-
-
-
       <div class="totals">
-
-        <div>
-
-          Subtotal:
-
-          ₹${Number(sale.SubTotal || 0).toFixed(2)}
-
-        </div>
-
-
-
-        <div>
-
-          Item Discount:
-
-          ₹${Number(sale.LineDiscount || 0).toFixed(2)}
-
-        </div>
-
-
-
-        <div>
-
-          Bill Discount:
-
-          ₹${Number(sale.BillDiscount || 0).toFixed(2)}
-
-        </div>
-
-
-
-        <div style="font-size:17px">
-
-          <strong>
-
-            Net Amount:
-
-            ₹${Number(sale.NetAmount || 0).toFixed(2)}
-
-          </strong>
-
-        </div>
-
+        <div class="total-row"><span>Subtotal:</span><span>${Number(sale.SubTotal || 0).toFixed(2)}</span></div>
+        <div class="total-row"><span>Item Discount:</span><span>${Number(sale.LineDiscount || 0).toFixed(2)}</span></div>
+        <div class="total-row"><span>Bill Discount:</span><span>${Number(sale.BillDiscount || 0).toFixed(2)}</span></div>
+        <div class="total-row net"><span>Net Amount:</span><span>Rs. ${Number(sale.NetAmount || 0).toFixed(2)}</span></div>
+        <div class="gst-note">Inclusive of GST</div>
       </div>
-
-
-
-      <div style="margin-top:12px">
-
-        <strong>Payment</strong>
-
-        ${paymentRows}
-
-      </div>
-
-
-
-      <p class="center" style="margin-top:22px">
-
-        Thank you
-
-      </p>
-
-
-
+      <div class="payment"><div>Payment:</div>${paymentRows}</div>
+      <div class="thanks">Thank you</div>
     </body>
-
-    </html>
-
-  `;
-
+    </html>`;
 }
-
-
-
 
 
 function printReceiptData(
