@@ -22,3 +22,71 @@ function render(){const d=REPORT_DATA,s=d.summary;document.getElementById('dashb
 function kpis(rows){return rows.map(x=>'<div class="kpi '+(x[2]||'')+'"><div class="n">'+esc(x[1])+'</div><div class="l">'+esc(x[0])+'</div></div>').join('');}
 function loadReports(){const btn=document.getElementById('load_btn');btn.disabled=true;setMsg('Loading report data...');google.script.run.withSuccessHandler(d=>{btn.disabled=false;REPORT_DATA=d;fillSelect('vendor',d.masters.vendors,'VendorID','VendorName','All Vendors');fillSelect('category',d.masters.categories,'CategoryID','CategoryName','All Categories');render();setMsg('Reports loaded. Returns/exchanges are adjusted against the original bill date.','ok');}).withFailureHandler(e=>{btn.disabled=false;setMsg(e.message||String(e),'err');}).getReportsData({FromDate:document.getElementById('from_date').value,ToDate:document.getElementById('to_date').value,VendorID:document.getElementById('vendor').value,CategoryID:document.getElementById('category').value});}
 function exportCurrentCSV(){const panel=document.getElementById(CURRENT_PANEL),wrap=[...panel.querySelectorAll('.table-wrap')].find(x=>x.querySelector('table'));if(!wrap){setMsg('No table is available to export in this section.','err');return;}const table=wrap.querySelector('table'),rows=[...table.querySelectorAll('tr')].map(tr=>[...tr.children].map(td=>'"'+td.innerText.replace(/"/g,'""')+'"').join(','));const blob=new Blob(['\ufeff'+rows.join('\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='SS_'+CURRENT_PANEL+'_report_'+document.getElementById('from_date').value+'_to_'+document.getElementById('to_date').value+'.csv';a.click();URL.revokeObjectURL(a.href);}
+
+function printReportCard(btn,title){
+  const card=btn.closest('.card');
+  if(!card)return;
+
+  const clone=card.cloneNode(true);
+  clone.querySelectorAll('.report-print-btn').forEach(x=>x.remove());
+  const clonedHead=clone.querySelector('.report-card-head');
+  if(clonedHead){
+    const h3=clonedHead.querySelector('h3');
+    clonedHead.replaceWith(h3||document.createTextNode(title));
+  }
+
+  const from=document.getElementById('from_date')?.value||'';
+  const to=document.getElementById('to_date')?.value||'';
+  const period=(from||to)?('Period: '+(from?fmtDate(from):'')+(from&&to?' to ':'')+(to?fmtDate(to):'')):'';
+  const generated=new Date().toLocaleString('en-IN');
+
+  const w=window.open('','_blank','width=1100,height=800');
+  if(!w){
+    setMsg('Please allow pop-ups for this site to print the selected report.','err');
+    return;
+  }
+
+  w.document.open();
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${esc(title)} - SS BRANDED OUTLET</title>
+<style>
+  *{box-sizing:border-box}
+  @page{size:A4 portrait;margin:12mm}
+  body{font-family:Arial,sans-serif;color:#111827;margin:0;background:#fff}
+  .print-head{text-align:center;border-bottom:1px solid #d1d5db;padding-bottom:10px;margin-bottom:16px}
+  .print-head h1{font-size:18px;margin:0 0 5px}
+  .print-head h2{font-size:16px;margin:0 0 6px}
+  .meta{font-size:11px;color:#4b5563;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .card{border:0!important;padding:0!important;margin:0!important}
+  .card>h3{display:none}
+  .table-wrap{max-height:none!important;overflow:visible!important}
+  table{width:100%;border-collapse:collapse;font-size:10.5px}
+  th,td{padding:7px 6px;border-bottom:1px solid #d1d5db;text-align:left;white-space:nowrap}
+  th{font-size:9px;text-transform:uppercase;color:#4b5563;background:#f9fafb}
+  .right{text-align:right}
+  .note{padding:8px 10px;border:1px solid #e5e7eb;background:#f9fafb;border-radius:6px;font-size:10px;color:#4b5563}
+  .muted{color:#6b7280}
+  @media print{
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+  <div class="print-head">
+    <h1>SS BRANDED OUTLET</h1>
+    <h2>${esc(title)}</h2>
+    <div class="meta"><span>${esc(period)}</span><span>Printed: ${esc(generated)}</span></div>
+  </div>
+  ${clone.outerHTML}
+  <script>
+    window.onload=function(){window.focus();window.print();};
+    window.onafterprint=function(){window.close();};
+  <\/script>
+</body>
+</html>`);
+  w.document.close();
+}
+
