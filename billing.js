@@ -1563,24 +1563,25 @@ function downloadReceiptPDF(data) {
   const items = data.items || [];
   const payments = data.payments || [];
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a5' });
 
   const pageWidth = doc.internal.pageSize.getWidth();
-  const left = 14;
-  const right = pageWidth - 14;
-  const customerX = 111;
-  const qtyX = 118;
-  const rateX = 150;
-  const totalLabelX = 145;
-  let y = 16;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const left = 10;
+  const right = pageWidth - 10;
+  const customerX = 76;
+  const qtyX = 92;
+  const rateX = 113;
+  const totalLabelX = 103;
+  let y = 12;
 
   doc.setFont('helvetica','bold');
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.text('SS BRANDED OUTLET', pageWidth / 2, y, {align:'center'});
 
   y += 6;
   doc.setFont('helvetica','normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.text('GSTIN: 33NGTPS6785L1ZX', pageWidth / 2, y, {align:'center'});
 
   y += 10;
@@ -1605,11 +1606,11 @@ function downloadReceiptPDF(data) {
   doc.setFont('helvetica','normal');
 
   items.forEach(i => {
-    if (y > 260) { doc.addPage(); y = 18; }
+    if (y > pageHeight - 30) { doc.addPage(); y = 14; }
     const code = String(i.DisplayCode || i.Barcode || '').trim();
     const category = String(i.CategoryName || '').trim();
     const itemName = category && code ? category + '/' + code : (code || category || 'ITEM');
-    const itemLines = doc.splitTextToSize(itemName, 82);
+    const itemLines = doc.splitTextToSize(itemName, 58);
     doc.text(itemLines, left, y);
     doc.text(String(i.Qty || 1), qtyX, y, {align:'right'});
     doc.text(Number(i.Rate || 0).toFixed(2), rateX, y, {align:'right'});
@@ -1631,11 +1632,11 @@ function downloadReceiptPDF(data) {
 
   y += 7;
   doc.setFont('helvetica','bold');
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.text('Net Amount:', totalLabelX, y, {align:'right'});
   doc.text('Rs. ' + Number(sale.NetAmount || 0).toFixed(2), right, y, {align:'right'});
   y += 6;
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.text('Inclusive of GST', right, y, {align:'right'});
 
   y += 11;
@@ -1685,25 +1686,26 @@ function buildReceiptHtml(data) {
     <head>
       <title>${esc(sale.BillNo || 'Bill')}</title>
       <style>
-        @page{size:A4 portrait;margin:14mm}
+        @page{size:A5 portrait;margin:8mm}
         *{box-sizing:border-box}
-        body{font-family:Arial,sans-serif;margin:0;color:#111;font-size:13px}
+        html,body{width:148mm;min-height:210mm}
+        body{font-family:Arial,sans-serif;margin:0;color:#111;font-size:11px}
         .header{text-align:center}
-        .header h2{margin:0 0 5px;font-size:20px}
-        .gstin{font-size:13px}
-        .divider{border:0;border-top:1px solid #111;margin:14px 0 11px}
-        .details{display:grid;grid-template-columns:1fr 1fr;column-gap:55px;row-gap:8px;margin-bottom:18px}
+        .header h2{margin:0 0 3px;font-size:17px}
+        .gstin{font-size:10px}
+        .divider{border:0;border-top:1px solid #111;margin:8px 0 7px}
+        .details{display:grid;grid-template-columns:1fr 1fr;column-gap:18px;row-gap:5px;margin-bottom:10px}
         table{width:100%;border-collapse:collapse}
-        th,td{padding:7px 0;text-align:left;vertical-align:top}
+        th,td{padding:4px 0;text-align:left;vertical-align:top}
         thead tr{border-bottom:1px solid #111}
         tbody tr:last-child{border-bottom:1px solid #111}
         th.num,td.num{text-align:right}
-        .totals{margin-top:10px;margin-left:auto;width:48%;line-height:1.75}
+        .totals{margin-top:7px;margin-left:auto;width:58%;line-height:1.5}
         .total-row{display:flex;justify-content:space-between;gap:20px}
-        .net{font-size:16px;font-weight:700;margin-top:2px}
+        .net{font-size:13px;font-weight:700;margin-top:2px}
         .gst-note{text-align:right;font-weight:700;margin-top:1px}
-        .payment{margin-top:16px;line-height:1.6}
-        .thanks{text-align:center;margin-top:24px}
+        .payment{margin-top:10px;line-height:1.45}
+        .thanks{text-align:center;margin-top:14px}
         @media print{button{display:none!important}}
       </style>
     </head>
