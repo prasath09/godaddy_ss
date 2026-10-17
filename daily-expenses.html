@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SS Branded Outlet - Daily Expenses</title>
+  <style>
+    :root{--bg:#f6f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--border:#e5e7eb;--primary:#111827;--soft:#eef2ff;--ok:#047857;--danger:#b91c1c}
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .shell{max-width:1200px;margin:auto;padding:20px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    h1,h2,h3{margin:0}.sub{color:var(--muted);font-size:13px;margin-top:5px}.card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px}
+    .form-grid{display:grid;grid-template-columns:1.2fr .5fr .5fr .4fr;gap:10px;align-items:end}label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}input,select{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:8px;background:#fff}
+    .btn{border:0;border-radius:8px;padding:11px 15px;cursor:pointer;font-weight:700}.primary{background:var(--primary);color:#fff}.secondary{background:var(--soft);color:#1d4ed8}.danger{background:#fef2f2;color:var(--danger)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpi{background:#fff;border:1px solid var(--border);border-radius:12px;padding:15px}.kpi .n{font-size:23px;font-weight:800}.kpi .l{font-size:11px;color:var(--muted);margin-top:4px}.good .n{color:var(--ok)}.bad .n{color:var(--danger)}
+    table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}th{font-size:11px;color:var(--muted);text-transform:uppercase}.right{text-align:right}.muted{color:var(--muted)}.msg{font-size:13px;margin-top:10px;min-height:18px}.err{color:var(--danger)}.ok{color:var(--ok)}
+    .summary-table th,.summary-table td{text-align:right}.summary-table th:first-child,.summary-table td:first-child{text-align:left}.grand td{font-weight:800;border-top:2px solid #111827}.toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.toolbar>div{min-width:180px}
+    @media(max-width:800px){.form-grid{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:1fr}.shell{padding:10px}}
+    @media print{.no-print{display:none!important}.shell{max-width:none;padding:0}.card{border:0;padding:6px}.kpis{grid-template-columns:repeat(3,1fr)}}
+  </style>
+  <script src="textile-config.js"></script>
+  <script src="api-bridge.js"></script>
+</head>
+<body><div class="shell">
+  <div class="top"><div><h1>SS BRANDED OUTLET</h1><div class="sub">Daily Other Expenses / Day Closing</div></div><div class="actions no-print"><button class="btn secondary" onclick="window.print()">Print</button><button class="btn secondary" onclick="window.close()">Close</button></div></div>
+
+  <div class="card no-print"><div class="toolbar"><div><label>Date</label><input id="expense_date" type="date" onchange="loadDay()"></div><button class="btn secondary" onclick="setTodayAndLoad()">Today</button></div></div>
+
+  <div class="card no-print"><h3>Add Other Expense</h3><div class="form-grid" style="margin-top:14px">
+    <div><label>Expense Description *</label><input id="description" placeholder="Example: Tea / Transport / Staff expense"></div>
+    <div><label>Amount *</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+    <div><label>Payment Mode *</label><select id="payment_mode"><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option><option value="BANK">Bank</option></select></div>
+    <div><button id="save_btn" class="btn primary" style="width:100%" onclick="saveExpense()">Add Expense</button></div>
+  </div><div id="msg" class="msg"></div></div>
+
+  <div id="kpis" class="kpis"></div>
+
+  <div class="card"><h3>Today's Expenses</h3><div id="expense_table" style="margin-top:12px"></div></div>
+
+  <div class="card"><h3>Daily Closing Summary</h3><div class="muted" style="margin:6px 0 12px">Sales collections less refunds/cancellations, then less other expenses.</div><div id="closing_table"></div></div>
+</div><script src="daily-expenses.js"></script></body></html>
