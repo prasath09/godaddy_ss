@@ -34,12 +34,10 @@
 
   <section>
     <h2>SQL Console</h2>
-    <div class="warn">Allowed: SELECT, SHOW, DESCRIBE/DESC, EXPLAIN, UPDATE and DELETE. UPDATE/DELETE require WHERE, a confirmed preview, and an administrator write key. INSERT/DROP/ALTER remain blocked.</div>
-    <label for="sqlWriteKey">SQL write key (required for UPDATE / DELETE)</label>
-    <input id="sqlWriteKey" type="password" autocomplete="off" placeholder="Enter DB_ADMIN_SQL_WRITE_KEY for destructive queries">
+    <div class="warn">Allowed: SELECT, SHOW, DESCRIBE/DESC, EXPLAIN and UPDATE. UPDATE must include a WHERE clause. INSERT/DELETE/DROP/ALTER remain blocked for safety.</div>
     <textarea id="sql" placeholder="SELECT * FROM inventory_units LIMIT 50"></textarea>
     <button id="runSql">Run Query</button>
-    <div id="sqlResult" class="table-wrap sql-result" aria-live="polite"></div>
+    <div id="sqlResult" class="table-wrap sql-result"></div>
   </section>
 
   <section>

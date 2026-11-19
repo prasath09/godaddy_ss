@@ -134,58 +134,7 @@ function renderSimpleTable(target,rows,cols){
   if(!rows?.length){target.innerHTML='<div style="padding:12px">No rows.</div>';return;}
   const columns=cols?.length?cols:Object.keys(rows[0]);target.innerHTML='<table><thead><tr>'+columns.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+columns.map(c=>'<td>'+esc(r[c]===null?'NULL':r[c])+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
 }
-async function runSql(){
-  const sql=el('sql').value.trim();
-  const target=el('sqlResult');
-  target.innerHTML='<div style="padding:12px">Running query...</div>';
-  if(!sql)throw Error('Enter a SQL query.');
-  const command=sql.match(/^\s*(\w+)/)?.[1]?.toUpperCase();
-  try{
-    let x;
-    if(command==='UPDATE'||command==='DELETE'){
-      const key=el('sqlWriteKey').value.trim();
-      if(!key)throw Error('Enter the administrator SQL write key.');
-      // Preview is always read-only; the backend validates the same query again before executing.
-      x=await protectedSqlRequest('sql-write/preview',{sql});
-    }else{
-      x=await (await api('sql',{method:'POST',body:{sql}})).json();
-      if(x.statement==='UPDATE'){
-        target.innerHTML='<div style="padding:12px"><strong>'+esc(x.message||'UPDATE completed.')+'</strong></div>';
-        status(x.message||'UPDATE completed.');return;
-      }
-      renderSimpleTable(target,x.rows,x.columns);
-      status('SQL query completed.'+(x.truncated?' Showing first 500 rows.':''));
-      return;
-    }
-    if(!confirm(command+' '+x.table+'?\nMatching rows: '+x.matchingRows+'\nThis change cannot be undone without a backup.')){
-      target.innerHTML='<div style="padding:12px">Query cancelled. No changes made.</div>';
-      return;
-    }
-    const result=await protectedSqlRequest('sql-write/execute',{sql,previewToken:x.previewToken});
-    renderSimpleTable(target,[{
-      Statement:result.statement,Table:result.table,
-      'Matched rows':result.matchedRows,'Affected rows':result.affectedRows,
-      'Changed rows':result.changedRows??'—',Result:result.message
-    }]);
-    status(result.message);
-    if(CONNECTED&&el('tableSelect').value===result.table){
-      await loadTables();el('tableSelect').value=result.table;await loadRows();
-    }
-  }catch(e){
-    target.innerHTML='<div style="padding:12px;color:#b42318"><strong>Query failed:</strong> '+esc(e.message||String(e))+'</div>';
-    throw e;
-  }
-}
-async function protectedSqlRequest(route,body){
-  const r=await fetch(base()+'/api/database-admin/'+route,{
-    method:'POST',headers:{'Content-Type':'application/json','x-db-admin-write-key':el('sqlWriteKey').value.trim()},
-    body:JSON.stringify(body)
-  });
-  const x=await r.json().catch(()=>({message:'Request failed: '+r.status}));
-  if(!r.ok)throw Error(x.message||('Request failed: '+r.status));
-  return x;
-}
-
+async function runSql(){const sql=el('sql').value;const x=await (await api('sql',{method:'POST',body:{sql}})).json();if(x.statement==='UPDATE'){el('sqlResult').innerHTML='<div style="padding:12px"><strong>'+esc(x.message||'UPDATE completed.')+'</strong></div>';status(x.message||'UPDATE completed.');return;}renderSimpleTable(el('sqlResult'),x.rows,x.columns);status('SQL query completed.'+(x.truncated?' Showing first 500 rows.':''));}
 async function download(mode){const tables=mode==='data'?selectedTables():[];if(mode==='data'&&!tables.length)throw Error('Select at least one table.');const r=await api('export',{method:'POST',body:{mode,tables}});await saveResponse(r,'textile-'+mode+'.sql');status('SQL backup downloaded.');}
 async function downloadCsv(){const t=el('tableSelect').value;if(!t)throw Error('Select a table first.');const r=await api('export-csv',{method:'POST',body:{table:t}});await saveResponse(r,t+'.csv');status('CSV downloaded for '+t+'.');}
 async function uploadCsv(){const t=el('tableSelect').value,f=el('csvFile').files?.[0];if(!t)throw Error('Select a table first.');if(!f)throw Error('Choose a CSV file.');if(!confirm('Update existing rows in '+t+' from this CSV?'))return;const csv=await f.text();const r=await fetch(base()+'/api/database-admin/import-csv?table='+encodeURIComponent(t),{method:'POST',headers:{'Content-Type':'text/csv;charset=utf-8'},body:csv});const x=await r.json().catch(()=>({message:'Import failed: '+r.status}));if(!r.ok)throw Error(x.message);status(`CSV update completed. Rows read: ${x.rowsRead}; updated: ${x.rowsUpdated}; not found: ${x.rowsNotFound}`);await loadRows();}
