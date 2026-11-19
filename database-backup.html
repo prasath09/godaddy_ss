@@ -18,6 +18,7 @@
       <div style="flex:1;min-width:320px"><input id="api" type="url" placeholder="https://your-backend-address" value="https://zcypn1azem.c39.airoapp.ai"></div>
       <div style="flex:0 0 auto;min-width:auto"><button id="connectDb" class="success">Connect Database</button></div>
     </div>
+    <div style="margin-top:10px"><label for="adminKey">Database admin key (not stored in browser storage)</label><input id="adminKey" type="password" autocomplete="off" placeholder="Enter DB_ADMIN_KEY from GoDaddy environment settings"></div>
     <div id="connectionStatus" class="muted" style="margin-top:8px">Enter/confirm the Node backend address, then click <strong>Connect Database</strong>. Tables will load only after the connection succeeds.</div>
   </section>
 
@@ -25,19 +26,11 @@
     <div class="toolbar">
       <div><label>Table</label><select id="tableSelect"><option value="">Select table</option></select></div>
       <div><label>Rows per page</label><select id="pageSize"><option>25</option><option selected>50</option><option>100</option><option>200</option></select></div>
-      <div><button id="refreshTable">Load / Refresh</button><button id="addRow" class="success">Add Row</button></div>
+      <div><button id="refreshTable">Load / Refresh</button><button id="addRow" class="success">Add Row (allowlisted only)</button></div>
     </div>
     <div id="tableInfo" class="muted" style="margin:10px 0"></div>
     <div id="rowTable" class="table-wrap">Select a table.</div>
     <div class="pager"><button id="prev" class="secondary">Previous</button><span id="pageText"></span><button id="next" class="secondary">Next</button></div>
-  </section>
-
-  <section>
-    <h2>Read-only SQL Console</h2>
-    <div class="warn">Allowed only: SELECT, SHOW, DESCRIBE/DESC and EXPLAIN. INSERT/UPDATE/DELETE/DROP/ALTER are blocked here. Use the row editor above for changes.</div>
-    <textarea id="sql" placeholder="SELECT * FROM inventory_units LIMIT 50"></textarea>
-    <button id="runSql">Run Query</button>
-    <div id="sqlResult" class="table-wrap sql-result"></div>
   </section>
 
   <section>
@@ -50,27 +43,23 @@
       </div>
       <div>
         <label>Update existing rows from CSV</label>
-        <input id="csvFile" type="file" accept=".csv,text/csv">
-        <button id="csvUpload">Upload CSV Update</button>
+
+        <div class="warn">CSV updates are disabled during initial safe testing.</div>
       </div>
     </div>
   </section>
 
   <section>
-    <h2>Advanced: Selected Table SQL Data / Clear Tables</h2>
-    <div class="warn">Clearing tables is destructive. Download a full backup first.</div>
+    <h2>Selected table data export</h2>
     <label><input id="selectAll" type="checkbox" style="width:auto"> Select All</label>
     <div id="tables" class="checkboxes"></div>
     <button id="data">Download Selected Tables SQL Data</button>
-    <button id="clear" class="danger">Clear Selected Tables</button>
   </section>
 
   <section id="status" class="status">Ready.</section>
 </div>
 
 <dialog id="rowDialog"><h2 id="rowDialogTitle">Edit Row</h2><div id="rowFields" class="form-list"></div><div style="margin-top:14px"><button id="saveRow" class="success">Save</button><button id="cancelRow" class="secondary">Cancel</button></div></dialog>
-<dialog id="deleteDialog"><h2>Confirm row deletion</h2><p id="deleteText"></p><div class="warn">This deletes the selected database row. Foreign-key protection may reject the deletion if other records depend on it.</div><button id="confirmDelete" class="danger">Yes, Delete Row</button><button id="cancelDelete" class="secondary">Cancel</button></dialog>
-<dialog id="clearDialog"><h2>Confirm clearing tables</h2><p>All rows in these tables will be deleted:</p><ul id="clearList"></ul><button id="confirmClear" class="danger">Yes, Clear Selected Data</button><button id="cancelClear" class="secondary">Cancel</button></dialog>
 </main>
 <script src="textile-config.js"></script>
 <script src="database-backup.js"></script>
