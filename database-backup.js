@@ -8,7 +8,7 @@ function base(){
   const u=new URL(raw);if(!['http:','https:'].includes(u.protocol))throw Error('Use an HTTP or HTTPS API address.');
   return raw.replace(/\/api\/rpc$/,'');
 }
-function headers(json=true){return json?{'Content-Type':'application/json'}:{};}
+function headers(json=true){const h=json?{'Content-Type':'application/json'}:{};const k=el('sqlWriteKey').value.trim();if(k)h['x-db-admin-write-key']=k;return h;}
 async function api(route,{method='GET',body=null,raw=false}={}){
   const r=await fetch(base()+'/api/database-admin/'+route,{method,headers:headers(!raw),...(body!==null?{body:raw?body:JSON.stringify(body)}:{})});
   if(!r.ok){const x=await r.json().catch(()=>({message:'Request failed: '+r.status}));throw Error(x.message||('Request failed: '+r.status));}
