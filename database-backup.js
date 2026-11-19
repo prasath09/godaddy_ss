@@ -1,7 +1,6 @@
 'use strict';
 const el=id=>document.getElementById(id);
 let TABLES=[], CURRENT=null, OFFSET=0, CONNECTED=false, ROW_MODE='', ROW_SOURCE=null;
-let dbAdminKey = ''; // Kept in memory only, never written to browser storage.
 const status=t=>el('status').textContent=t;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const base=()=>el('api').value.trim().replace(/\/$/,'').replace(/\/api\/rpc$/,'');
@@ -9,8 +8,7 @@ const selectedTables=()=>[...document.querySelectorAll('#tables input:checked')]
 const currentMeta=()=>TABLES.find(t=>t.name===el('tableSelect').value);
 async function api(path,{method='GET',body,download=false}={}){
   const url=base();if(!/^https?:\/\//.test(url))throw Error('Enter a valid API address');
-  const key=dbAdminKey;if(!key)throw Error('Administrator authorization required');
-  const res=await fetch(url+'/api/database-admin/'+path,{method,headers:{'x-db-admin-key':key,...(body!==undefined?{'Content-Type':'application/json'}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})});
+  const res=await fetch(url+'/api/database-admin/'+path,{method,headers:{...(body!==undefined?{'Content-Type':'application/json'}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})});
   if(!res.ok){const e=await res.json().catch(()=>({message:'HTTP '+res.status}));throw Error(e.message||'Request failed');}
   return download?res:res.json();
 }
@@ -75,15 +73,11 @@ async function download(path,body,fallback){
   status('Download complete');
 }
 el('connectDb').onclick=()=>run(async()=>{
-  // Authentication is still mandatory even though the visible key field is removed.
-  // The key is requested once per page load and kept only in memory.
-  if(!dbAdminKey){
-    const entered=window.prompt('Enter the database administrator key to connect:');
-    if(!entered)return;
-    dbAdminKey=entered;
-  }
-  try{await loadTables();}catch(e){
-    if(/401|403|unauthori[sz]ed|invalid.*key|forbidden/i.test(String(e.message||e)))dbAdminKey='';
+  try { await loadTables(); }
+  catch(e) {
+    if (/401|403|unauthori[sz]ed|access denied|forbidden/i.test(String(e.message||e))) {
+      el('connectionStatus').textContent='Network access restricted by the GoDaddy server. Configure DB_ADMIN_ALLOWED_IPS for your server-observed address, or implement a secure administrator session. No administrator key is required.';
+    }
     throw e;
   }
 });
